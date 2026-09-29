@@ -1,0 +1,6 @@
+{
+  "name": "SasukeX",
+  "description": "Premium personal AI chatbot powered by Google Gemini with streaming responses and local history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

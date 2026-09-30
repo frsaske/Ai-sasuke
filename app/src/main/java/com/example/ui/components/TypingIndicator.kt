@@ -20,68 +20,68 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentIndigo
+import com.example.ui.theme.TextMuted
+import com.example.ui.theme.TextSecondary
 
 @Composable
 fun TypingIndicator(
     modifier: Modifier = Modifier,
-    dotColor: Color = AccentCyan
+    dotColor: Color = TextSecondary
 ) {
     val transition = rememberInfiniteTransition(label = "typing_dots")
 
     val dot1Scale by transition.animateFloat(
-        initialValue = 0.5f,
+        initialValue = 0.6f,
         targetValue = 1.1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 500),
+            animation = tween(durationMillis = 450),
             repeatMode = RepeatMode.Reverse
         ),
         label = "dot1"
     )
 
     val dot2Scale by transition.animateFloat(
-        initialValue = 0.5f,
+        initialValue = 0.6f,
         targetValue = 1.1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 500, delayMillis = 160),
+            animation = tween(durationMillis = 450, delayMillis = 150),
             repeatMode = RepeatMode.Reverse
         ),
         label = "dot2"
     )
 
     val dot3Scale by transition.animateFloat(
-        initialValue = 0.5f,
+        initialValue = 0.6f,
         targetValue = 1.1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 500, delayMillis = 320),
+            animation = tween(durationMillis = 450, delayMillis = 300),
             repeatMode = RepeatMode.Reverse
         ),
         label = "dot3"
     )
 
     Row(
-        modifier = modifier.padding(vertical = 6.dp, horizontal = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = modifier.padding(vertical = 8.dp, horizontal = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(7.dp)
+                .size(6.5.dp)
                 .scale(dot1Scale)
                 .clip(CircleShape)
                 .background(dotColor)
         )
         Box(
             modifier = Modifier
-                .size(7.dp)
+                .size(6.5.dp)
                 .scale(dot2Scale)
                 .clip(CircleShape)
-                .background(AccentIndigo)
+                .background(dotColor)
         )
         Box(
             modifier = Modifier
-                .size(7.dp)
+                .size(6.5.dp)
                 .scale(dot3Scale)
                 .clip(CircleShape)
                 .background(dotColor)

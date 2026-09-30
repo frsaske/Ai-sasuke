@@ -23,17 +23,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,8 +53,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -71,11 +62,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.AppSettingsManager
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentIndigo
 import com.example.ui.theme.BorderMedium
 import com.example.ui.theme.BorderSubtle
-import com.example.ui.theme.ErrorBorder
 import com.example.ui.theme.ErrorContainer
 import com.example.ui.theme.ErrorRed
 import com.example.ui.theme.ObsidianBg
@@ -83,10 +71,10 @@ import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.SurfaceContainerDark
 import com.example.ui.theme.SurfaceContainerHighDark
 import com.example.ui.theme.SurfaceDark
+import com.example.ui.theme.SurfaceElevated
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.WarningAmber
 import kotlinx.coroutines.launch
 
 sealed class TestConnectionState {
@@ -132,10 +120,10 @@ fun SettingsScreen(
     if (showResetSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showResetSettingsDialog = false },
-            title = { Text("Reset All Settings?", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            title = { Text("Reset Settings", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
             text = {
                 Text(
-                    "This will restore the default model and default system prompt. Your saved API key will remain intact.",
+                    "Restore default model and system prompt? Your API key will be preserved.",
                     color = TextSecondary,
                     fontSize = 14.sp
                 )
@@ -146,10 +134,10 @@ fun SettingsScreen(
                         onResetAllSettings()
                         showResetSettingsDialog = false
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar("Settings restored to defaults")
+                            snackbarHostState.showSnackbar("Settings reset")
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentIndigo)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
                 ) {
                     Text("Reset")
                 }
@@ -159,17 +147,17 @@ fun SettingsScreen(
                     Text("Cancel", color = TextMuted)
                 }
             },
-            containerColor = SurfaceContainerHighDark
+            containerColor = SurfaceElevated
         )
     }
 
     if (showClearChatsDialog) {
         AlertDialog(
             onDismissRequest = { showClearChatsDialog = false },
-            title = { Text("Clear All Conversations?", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            title = { Text("Clear All Chats", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
             text = {
                 Text(
-                    "All chat history stored locally on this device will be permanently erased.",
+                    "Delete all saved chats from this device?",
                     color = TextSecondary,
                     fontSize = 14.sp
                 )
@@ -180,12 +168,12 @@ fun SettingsScreen(
                         onClearAllChats()
                         showClearChatsDialog = false
                         coroutineScope.launch {
-                            snackbarHostState.showSnackbar("All conversations erased")
+                            snackbarHostState.showSnackbar("All chats deleted")
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed, contentColor = Color.White)
                 ) {
-                    Text("Erase All")
+                    Text("Delete")
                 }
             },
             dismissButton = {
@@ -193,7 +181,7 @@ fun SettingsScreen(
                     Text("Cancel", color = TextMuted)
                 }
             },
-            containerColor = SurfaceContainerHighDark
+            containerColor = SurfaceElevated
         )
     }
 
@@ -201,21 +189,12 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = "AI SETTINGS",
-                            color = TextPrimary,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            letterSpacing = 1.sp
-                        )
-                        Text(
-                            text = "SasukeX Personal Assistant Configuration",
-                            color = TextMuted,
-                            fontSize = 11.sp
-                        )
-                    }
+                    Text(
+                        text = "Settings",
+                        color = TextPrimary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("settings_back_button")) {
@@ -240,521 +219,394 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
 
-            // 1. GEMINI API KEY SECTION
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(SurfaceDark)
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp))
-                    .padding(18.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(SurfaceContainerHighDark),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Key, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Gemini API Key",
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                    }
-
-                    // Key status badge
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (hasConfiguredKey) SuccessGreen.copy(alpha = 0.15f)
-                                else WarningAmber.copy(alpha = 0.15f)
-                            )
-                            .border(
-                                1.dp,
-                                if (hasConfiguredKey) SuccessGreen.copy(alpha = 0.5f)
-                                else WarningAmber.copy(alpha = 0.5f),
-                                RoundedCornerShape(8.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = if (hasConfiguredKey) "Configured" else "Missing Key",
-                            color = if (hasConfiguredKey) SuccessGreen else WarningAmber,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
+            // SECTION 1: API KEY
+            Column {
                 Text(
-                    text = if (hasConfiguredKey) {
-                        "Active Key: $currentApiKeyMasked (Hardware Encrypted)"
-                    } else {
-                        "Enter your Google Gemini API key to activate streaming generation."
-                    },
-                    color = TextSecondary,
-                    fontSize = 12.5.sp,
-                    lineHeight = 18.sp
+                    text = "API KEY",
+                    color = TextMuted,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.8.sp,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Input Field
-                OutlinedTextField(
-                    value = apiKeyInput,
-                    onValueChange = {
-                        apiKeyInput = it
-                        testState = TestConnectionState.Idle
-                    },
-                    placeholder = {
-                        Text(
-                            text = if (hasConfiguredKey) "Enter new key to replace..." else "AIzaSy...",
-                            color = TextMuted,
-                            fontSize = 14.sp
-                        )
-                    },
-                    visualTransformation = if (isApiKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        IconButton(onClick = { isApiKeyVisible = !isApiKeyVisible }) {
-                            Icon(
-                                imageVector = if (isApiKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (isApiKeyVisible) "Hide Key" else "Show Key",
-                                tint = TextMuted
-                            )
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentCyan,
-                        unfocusedBorderColor = BorderSubtle,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = SurfaceContainerDark,
-                        unfocusedContainerColor = SurfaceContainerDark
-                    ),
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("api_key_input")
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Action Buttons for Key
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceElevated)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                        .padding(14.dp)
                 ) {
-                    Button(
-                        onClick = {
-                            if (apiKeyInput.isNotBlank()) {
-                                onSaveApiKey(apiKeyInput)
-                                apiKeyInput = ""
-                                testState = TestConnectionState.Idle
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("Gemini API key encrypted and saved locally.")
-                                }
-                            }
-                        },
-                        enabled = apiKeyInput.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentIndigo),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(40.dp)
-                            .testTag("save_api_key_button")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Save Key", fontSize = 13.sp)
+                        Text(
+                            text = "Gemini Key",
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 14.sp
+                        )
+
+                        Text(
+                            text = if (hasConfiguredKey) "Saved" else "Not set",
+                            color = if (hasConfiguredKey) SuccessGreen else TextMuted,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
 
                     if (hasConfiguredKey) {
-                        OutlinedButton(
-                            onClick = {
-                                onClearApiKey()
-                                apiKeyInput = ""
-                                testState = TestConnectionState.Idle
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("API key cleared.")
-                                }
-                            },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(
-                                brush = androidx.compose.ui.graphics.SolidColor(ErrorRed.copy(alpha = 0.5f))
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .height(40.dp)
-                                .testTag("clear_api_key_button")
-                        ) {
-                            Text("Clear", fontSize = 13.sp)
-                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = currentApiKeyMasked,
+                            color = TextMuted,
+                            fontSize = 12.sp
+                        )
                     }
 
-                    OutlinedButton(
-                        onClick = {
-                            coroutineScope.launch {
-                                testState = TestConnectionState.Testing
-                                val keyToTest = apiKeyInput.ifBlank { "" }
-                                val result = onTestConnection(keyToTest, currentModel)
-                                testState = result.fold(
-                                    onSuccess = { snippet -> TestConnectionState.Success(snippet) },
-                                    onFailure = { err -> TestConnectionState.Failure(err.localizedMessage ?: "Connection failed") }
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = apiKeyInput,
+                        onValueChange = {
+                            apiKeyInput = it
+                            testState = TestConnectionState.Idle
+                        },
+                        placeholder = {
+                            Text(
+                                text = if (hasConfiguredKey) "Enter new key to update..." else "Paste Gemini API Key...",
+                                color = TextMuted,
+                                fontSize = 13.5.sp
+                            )
+                        },
+                        visualTransformation = if (isApiKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        trailingIcon = {
+                            IconButton(onClick = { isApiKeyVisible = !isApiKeyVisible }) {
+                                Icon(
+                                    imageVector = if (isApiKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = "Toggle visibility",
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         },
-                        enabled = (hasConfiguredKey || apiKeyInput.isNotBlank()) && testState !is TestConnectionState.Testing,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentCyan),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(AccentCyan)
+                        singleLine = true,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BorderMedium,
+                            unfocusedBorderColor = BorderSubtle,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedContainerColor = SurfaceDark,
+                            unfocusedContainerColor = SurfaceDark
                         ),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .height(40.dp)
-                            .testTag("test_api_connection_button")
-                    ) {
-                        if (testState is TestConnectionState.Testing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = AccentCyan,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text("Test API", fontSize = 13.sp)
-                        }
-                    }
-                }
-
-                // Test Connection Feedback Result
-                AnimatedVisibility(visible = testState !is TestConnectionState.Idle) {
-                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 12.dp)
+                            .testTag("api_key_input")
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        when (val state = testState) {
-                            is TestConnectionState.Success -> {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(SuccessGreen.copy(alpha = 0.15f))
-                                        .border(1.dp, SuccessGreen.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                                        .padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (apiKeyInput.isNotBlank()) {
+                                    onSaveApiKey(apiKeyInput)
+                                    apiKeyInput = ""
+                                    testState = TestConnectionState.Idle
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("API key saved")
+                                    }
+                                }
+                            },
+                            enabled = apiKeyInput.isNotBlank(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White,
+                                contentColor = Color.Black,
+                                disabledContainerColor = SurfaceContainerHighDark,
+                                disabledContentColor = TextMuted
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .testTag("save_api_key_button")
+                        ) {
+                            Text("Save", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        }
+
+                        if (hasConfiguredKey) {
+                            OutlinedButton(
+                                onClick = {
+                                    onClearApiKey()
+                                    apiKeyInput = ""
+                                    testState = TestConnectionState.Idle
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Key removed")
+                                    }
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed),
+                                border = ButtonDefaults.outlinedButtonBorder(true),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .height(38.dp)
+                                    .testTag("clear_api_key_button")
+                            ) {
+                                Text("Clear", fontSize = 13.sp)
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    testState = TestConnectionState.Testing
+                                    val keyToTest = apiKeyInput.ifBlank { "" }
+                                    val result = onTestConnection(keyToTest, currentModel)
+                                    testState = result.fold(
+                                        onSuccess = { snippet -> TestConnectionState.Success(snippet) },
+                                        onFailure = { err -> TestConnectionState.Failure(err.localizedMessage ?: "Failed") }
+                                    )
+                                }
+                            },
+                            enabled = (hasConfiguredKey || apiKeyInput.isNotBlank()) && testState !is TestConnectionState.Testing,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                            border = ButtonDefaults.outlinedButtonBorder(true),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .height(38.dp)
+                                .testTag("test_api_connection_button")
+                        ) {
+                            if (testState is TestConnectionState.Testing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    color = TextPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Test", fontSize = 13.sp)
+                            }
+                        }
+                    }
+
+                    // Test Result Inline
+                    AnimatedVisibility(visible = testState !is TestConnectionState.Idle) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 10.dp)
+                        ) {
+                            when (val state = testState) {
+                                is TestConnectionState.Success -> {
                                     Text(
-                                        text = "Connection verified! Echo: \"${state.responseSnippet}\"",
+                                        text = "Connection verified successfully.",
                                         color = SuccessGreen,
                                         fontSize = 12.5.sp
                                     )
                                 }
-                            }
-                            is TestConnectionState.Failure -> {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(ErrorContainer)
-                                        .border(1.dp, ErrorBorder, RoundedCornerShape(8.dp))
-                                        .padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.Error, contentDescription = null, tint = ErrorRed, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                is TestConnectionState.Failure -> {
                                     Text(
                                         text = state.errorMessage,
                                         color = ErrorRed,
                                         fontSize = 12.5.sp
                                     )
                                 }
+                                else -> {}
                             }
-                            else -> {}
                         }
                     }
                 }
             }
 
-            // 2. MODEL SELECTION SECTION
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(SurfaceDark)
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp))
-                    .padding(18.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(SurfaceContainerHighDark),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Memory, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(18.dp))
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Model Selection",
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
+            // SECTION 2: MODEL SELECTION
+            Column {
                 Text(
-                    text = "Select the Gemini foundation model powering SasukeX.",
-                    color = TextSecondary,
-                    fontSize = 12.5.sp
+                    text = "MODEL",
+                    color = TextMuted,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.8.sp,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
                 )
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AppSettingsManager.AVAILABLE_MODELS.forEach { modelOption ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceElevated)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                ) {
+                    AppSettingsManager.AVAILABLE_MODELS.forEachIndexed { index, modelOption ->
                         val isSelected = modelOption.id == currentModel
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) SurfaceContainerHighDark else SurfaceContainerDark.copy(alpha = 0.6f))
-                                .border(
-                                    1.2.dp,
-                                    if (isSelected) AccentCyan else BorderSubtle,
-                                    RoundedCornerShape(12.dp)
-                                )
                                 .clickable { onSelectModel(modelOption.id) }
-                                .padding(12.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
                                 .testTag("model_option_${modelOption.id}"),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(CircleShape)
-                                    .border(2.dp, if (isSelected) AccentCyan else TextMuted, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (isSelected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .clip(CircleShape)
-                                            .background(AccentCyan)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
                             Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = modelOption.displayName,
-                                        color = TextPrimary,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                        fontSize = 14.sp
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(SurfaceDark)
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(
-                                            text = modelOption.badge,
-                                            color = AccentCyan,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = modelOption.displayName,
+                                    color = TextPrimary,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.height(1.dp))
                                 Text(
                                     text = modelOption.description,
                                     color = TextMuted,
-                                    fontSize = 12.sp,
-                                    lineHeight = 16.sp
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Selected",
+                                    tint = TextPrimary,
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
+
+                        if (index < AppSettingsManager.AVAILABLE_MODELS.size - 1) {
+                            HorizontalDivider(color = BorderSubtle, thickness = 0.6.dp)
+                        }
                     }
                 }
             }
 
-            // 3. SYSTEM PROMPT SECTION
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(SurfaceDark)
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp))
-                    .padding(18.dp)
-            ) {
+            // SECTION 3: SYSTEM PROMPT
+            Column {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(SurfaceContainerHighDark),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Settings, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "SYSTEM PROMPT",
+                        color = TextMuted,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.8.sp
+                    )
+
+                    Text(
+                        text = "Reset",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .clickable {
+                                onResetSystemPrompt()
+                                systemPromptInput = AppSettingsManager.DEFAULT_SYSTEM_PROMPT
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Prompt reset")
+                                }
+                            }
+                            .testTag("reset_system_prompt_button")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceElevated)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = systemPromptInput,
+                        onValueChange = {
+                            systemPromptInput = it
+                            onSaveSystemPrompt(it)
+                        },
+                        minLines = 3,
+                        maxLines = 6,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BorderMedium,
+                            unfocusedBorderColor = BorderSubtle,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedContainerColor = SurfaceDark,
+                            unfocusedContainerColor = SurfaceDark
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("system_prompt_input")
+                    )
+                }
+            }
+
+            // SECTION 4: DATA & MANAGEMENT
+            Column {
+                Text(
+                    text = "DATA",
+                    color = TextMuted,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.8.sp,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceElevated)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showClearChatsDialog = true }
+                            .padding(horizontal = 14.dp, vertical = 13.dp)
+                            .testTag("clear_all_history_button"),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "System Prompt",
-                            color = TextPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
+                            text = "Clear all chats",
+                            color = ErrorRed,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal
                         )
                     }
 
-                    TextButton(
-                        onClick = {
-                            onResetSystemPrompt()
-                            systemPromptInput = AppSettingsManager.DEFAULT_SYSTEM_PROMPT
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("System prompt reset to default")
-                            }
-                        },
-                        colors = ButtonDefaults.textButtonColors(contentColor = AccentCyan),
-                        modifier = Modifier.testTag("reset_system_prompt_button")
+                    HorizontalDivider(color = BorderSubtle, thickness = 0.6.dp)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showResetSettingsDialog = true }
+                            .padding(horizontal = 14.dp, vertical = 13.dp)
+                            .testTag("reset_all_settings_button"),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(15.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Reset", fontSize = 12.sp)
+                        Text(
+                            text = "Reset all settings",
+                            color = TextSecondary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal
+                        )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Defines SasukeX's persona, precision, formatting guidelines, and behavioral constraints.",
-                    color = TextSecondary,
-                    fontSize = 12.5.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = systemPromptInput,
-                    onValueChange = {
-                        systemPromptInput = it
-                        onSaveSystemPrompt(it)
-                    },
-                    minLines = 4,
-                    maxLines = 8,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentCyan,
-                        unfocusedBorderColor = BorderSubtle,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = SurfaceContainerDark,
-                        unfocusedContainerColor = SurfaceContainerDark
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("system_prompt_input")
-                )
-            }
-
-            // 4. MANAGEMENT & DANGER ZONE
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(SurfaceDark)
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp))
-                    .padding(18.dp)
-            ) {
-                Text(
-                    text = "Storage & State",
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { showResetSettingsDialog = true },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(BorderSubtle)
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("reset_all_settings_button")
-                    ) {
-                        Text("Reset Settings", fontSize = 12.5.sp)
-                    }
-
-                    OutlinedButton(
-                        onClick = { showClearChatsDialog = true },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(ErrorRed.copy(alpha = 0.5f))
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("clear_all_history_button")
-                    ) {
-                        Text("Clear All Chats", fontSize = 12.5.sp)
-                    }
-                }
-            }
-
-            // 5. ARCHITECTURE FOOTER
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceContainerDark.copy(alpha = 0.4f))
-                    .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                    .padding(14.dp)
-            ) {
-                Text(
-                    text = "SasukeX Personal Assistant Core v1.0\n• Hardware Keystore protected credentials\n• Modular architecture ready for GitHub, Google Drive, Gmail & Terminal tools\n• Built on Google Gemini REST & SSE streaming",
-                    color = TextMuted,
-                    fontSize = 11.5.sp,
-                    lineHeight = 17.sp,
-                    fontFamily = FontFamily.Monospace
-                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

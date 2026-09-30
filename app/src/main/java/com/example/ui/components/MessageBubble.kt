@@ -36,7 +36,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,8 +56,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.ChatMessage
 import com.example.data.model.MessageRole
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentIndigo
 import com.example.ui.theme.BorderMedium
 import com.example.ui.theme.BorderSubtle
 import com.example.ui.theme.ErrorBorder
@@ -67,6 +64,7 @@ import com.example.ui.theme.ErrorRed
 import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.SurfaceContainerDark
 import com.example.ui.theme.SurfaceContainerHighDark
+import com.example.ui.theme.SurfaceElevated
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -98,7 +96,6 @@ fun MessageBubble(
     }
 
     val isUser = message.role == MessageRole.USER
-
     val formattedTime = remember(message.timestamp) {
         SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(message.timestamp))
     }
@@ -110,21 +107,21 @@ fun MessageBubble(
         contentAlignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         if (isUser) {
-            // User Message
+            // User Message Bubble
             Column(
                 horizontalAlignment = Alignment.End,
-                modifier = Modifier.widthIn(max = 320.dp)
+                modifier = Modifier.widthIn(max = 310.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 4.dp))
+                        .clip(RoundedCornerShape(18.dp))
                         .background(UserBubbleBg)
-                        .border(1.dp, UserBubbleBorder, RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 4.dp))
+                        .border(1.dp, UserBubbleBorder, RoundedCornerShape(18.dp))
                         .combinedClickable(
                             onClick = {},
                             onLongClick = { showContextMenu = true }
                         )
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 11.dp)
                         .testTag("user_message_bubble")
                 ) {
                     Text(
@@ -135,7 +132,7 @@ fun MessageBubble(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
                     text = formattedTime,
                     fontSize = 11.sp,
@@ -143,15 +140,14 @@ fun MessageBubble(
                     modifier = Modifier.padding(end = 4.dp)
                 )
 
-                // Context menu for User message
                 DropdownMenu(
                     expanded = showContextMenu,
                     onDismissRequest = { showContextMenu = false },
-                    modifier = Modifier.background(SurfaceContainerHighDark)
+                    modifier = Modifier.background(SurfaceElevated)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Copy Text", color = TextPrimary) },
-                        leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextSecondary) },
+                        text = { Text("Copy", color = TextPrimary, fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp)) },
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             clipboard.setPrimaryClip(ClipData.newPlainText("Message", message.content))
@@ -159,20 +155,20 @@ fun MessageBubble(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Share", color = TextPrimary) },
-                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = TextSecondary) },
+                        text = { Text("Share", color = TextPrimary, fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp)) },
                         onClick = {
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_TEXT, message.content)
                             }
-                            context.startActivity(Intent.createChooser(intent, "Share Message"))
+                            context.startActivity(Intent.createChooser(intent, "Share"))
                             showContextMenu = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Delete", color = ErrorRed) },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = ErrorRed) },
+                        text = { Text("Delete", color = ErrorRed, fontSize = 14.sp) },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = ErrorRed, modifier = Modifier.size(16.dp)) },
                         onClick = {
                             showContextMenu = false
                             onDelete()
@@ -181,26 +177,26 @@ fun MessageBubble(
                 }
             }
         } else {
-            // Assistant Message
+            // Assistant Message: Seamless full-bleed reading
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
             ) {
-                // SasukeX Avatar Emblem
+                // Minimal clean avatar
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(28.dp)
                         .clip(CircleShape)
                         .background(SurfaceContainerHighDark)
-                        .border(1.dp, AccentCyan, CircleShape),
+                        .border(1.dp, BorderMedium, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "SX",
-                        color = AccentCyan,
+                        text = "S",
+                        color = TextPrimary,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontFamily = FontFamily.Monospace
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.SansSerif
                     )
                 }
 
@@ -215,14 +211,13 @@ fun MessageBubble(
                         )
                         .testTag("assistant_message_bubble")
                 ) {
-                    // Content or Error
                     if (message.isError) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(ErrorContainer)
-                                .border(1.dp, ErrorBorder, RoundedCornerShape(12.dp))
+                                .border(1.dp, ErrorBorder, RoundedCornerShape(10.dp))
                                 .padding(14.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -230,66 +225,62 @@ fun MessageBubble(
                                     imageVector = Icons.Default.Warning,
                                     contentDescription = "Error",
                                     tint = ErrorRed,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Generation Notice",
+                                    text = "Unable to complete request",
                                     color = ErrorRed,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontSize = 13.5.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = message.errorMessage ?: message.content.ifBlank { "An unexpected issue occurred while requesting Gemini." },
-                                color = TextPrimary,
-                                fontSize = 13.5.sp,
-                                lineHeight = 19.sp
+                                text = message.errorMessage ?: message.content.ifBlank { "An unexpected error occurred." },
+                                color = TextSecondary,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             OutlinedButton(
                                 onClick = onRetry,
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = AccentCyan
-                                ),
-                                border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(AccentCyan)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                                border = ButtonDefaults.outlinedButtonBorder(true),
                                 modifier = Modifier
-                                    .height(34.dp)
+                                    .height(32.dp)
                                     .testTag("retry_button")
                             ) {
                                 Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Retry Request", fontSize = 12.sp)
+                                Text("Retry", fontSize = 12.sp)
                             }
                         }
                     } else {
-                        // Regular / Streaming Assistant Content
                         if (message.content.isNotBlank()) {
                             MarkdownContent(content = message.content)
                         }
 
-                        // If streaming and empty or active
                         if (message.isStreaming) {
-                            TypingIndicator(modifier = Modifier.padding(top = 4.dp))
+                            TypingIndicator()
                         }
                     }
 
-                    // Bottom Action Bar for Assistant
+                    // Action buttons
                     if (!message.isStreaming && !message.isError && message.content.isNotBlank()) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             IconButton(
                                 onClick = {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("SasukeX Response", message.content))
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Response", message.content))
                                     copied = true
                                 },
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(28.dp)
                                     .testTag("copy_response_button")
                             ) {
                                 if (copied) {
@@ -297,14 +288,14 @@ fun MessageBubble(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = "Copied",
                                         tint = SuccessGreen,
-                                        modifier = Modifier.size(15.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 } else {
                                     Icon(
                                         imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Copy Response",
+                                        contentDescription = "Copy",
                                         tint = TextMuted,
-                                        modifier = Modifier.size(15.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
                             }
@@ -312,14 +303,14 @@ fun MessageBubble(
                             IconButton(
                                 onClick = onRegenerate,
                                 modifier = Modifier
-                                    .size(32.dp)
+                                    .size(28.dp)
                                     .testTag("regenerate_button")
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Refresh,
                                     contentDescription = "Regenerate",
                                     tint = TextMuted,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
 
@@ -329,15 +320,15 @@ fun MessageBubble(
                                         type = "text/plain"
                                         putExtra(Intent.EXTRA_TEXT, message.content)
                                     }
-                                    context.startActivity(Intent.createChooser(intent, "Share Response"))
+                                    context.startActivity(Intent.createChooser(intent, "Share"))
                                 },
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(28.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Share,
                                     contentDescription = "Share",
                                     tint = TextMuted,
-                                    modifier = Modifier.size(15.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
 
@@ -350,32 +341,31 @@ fun MessageBubble(
                         }
                     }
 
-                    // Context Menu
                     DropdownMenu(
                         expanded = showContextMenu,
                         onDismissRequest = { showContextMenu = false },
-                        modifier = Modifier.background(SurfaceContainerHighDark)
+                        modifier = Modifier.background(SurfaceElevated)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Copy Response", color = TextPrimary) },
-                            leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextSecondary) },
+                            text = { Text("Copy", color = TextPrimary, fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp)) },
                             onClick = {
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(ClipData.newPlainText("SasukeX Response", message.content))
+                                clipboard.setPrimaryClip(ClipData.newPlainText("Response", message.content))
                                 showContextMenu = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Regenerate", color = TextPrimary) },
-                            leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null, tint = TextSecondary) },
+                            text = { Text("Regenerate", color = TextPrimary, fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp)) },
                             onClick = {
                                 showContextMenu = false
                                 onRegenerate()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete", color = ErrorRed) },
-                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = ErrorRed) },
+                            text = { Text("Delete", color = ErrorRed, fontSize = 14.sp) },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = ErrorRed, modifier = Modifier.size(16.dp)) },
                             onClick = {
                                 showContextMenu = false
                                 onDelete()

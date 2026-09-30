@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -33,11 +34,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentIndigo
+import com.example.ui.theme.BorderMedium
 import com.example.ui.theme.BorderSubtle
 import com.example.ui.theme.SurfaceContainerDark
 import com.example.ui.theme.SurfaceContainerHighDark
+import com.example.ui.theme.SurfaceElevated
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -57,111 +58,81 @@ fun EmptyStateView(
 ) {
     val starterPrompts = listOf(
         StarterPrompt(
-            title = "Android Architecture",
-            subtitle = "Design a scalable Kotlin Room DB with Flow & M3",
+            title = "Code Architecture",
+            subtitle = "Design a scalable Android repository pattern with Room & Flow",
             icon = Icons.Default.Code,
-            prompt = "Design a clean, production-grade Android Room database architecture using Kotlin Coroutines, Flow, and Jetpack Compose. Include entities, DAO, and Repository patterns."
+            prompt = "Design a clean, production-grade Android Room database architecture using Kotlin Coroutines, Flow, and Jetpack Compose."
         ),
         StarterPrompt(
-            title = "Technical Deep-Dive",
-            subtitle = "Explain quantum computing algorithms in plain English",
+            title = "System Design",
+            subtitle = "Compare event-driven architecture vs REST for high concurrency",
             icon = Icons.Default.Lightbulb,
-            prompt = "Explain quantum computing and Shor's algorithm in intuitive, structured terms with practical real-world implications."
+            prompt = "Compare event-driven architecture with REST API design for low-latency mobile backends."
         ),
         StarterPrompt(
-            title = "Security & Hardening",
-            subtitle = "Audit mobile apps for key storage & cryptographic pitfalls",
+            title = "Security Audit",
+            subtitle = "KeyStore management & mobile encryption best practices",
             icon = Icons.Default.Security,
-            prompt = "Provide a comprehensive security checklist for modern Android applications, focusing on secure KeyStore management, network transport, and reverse-engineering prevention."
+            prompt = "Provide a security checklist for Android apps focusing on hardware KeyStore, data encryption, and network transport."
         ),
         StarterPrompt(
-            title = "Executive Communication",
-            subtitle = "Draft a crisp proposal for an AI agent platform",
+            title = "Technical Writing",
+            subtitle = "Draft a crisp release notes document for a major software update",
             icon = Icons.Default.Edit,
-            prompt = "Draft an executive summary and architecture pitch for building a personal AI agent platform that connects to GitHub, Drive, and Terminal tools."
+            prompt = "Write a clear, structured release notes document for version 2.0 of an AI application."
         )
     )
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 24.dp),
+            .padding(horizontal = 20.dp, vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Futuristic Emblem
+        // Minimalist Emblem
         Box(
             modifier = Modifier
-                .size(68.dp)
+                .size(54.dp)
                 .clip(CircleShape)
-                .background(SurfaceContainerDark)
-                .border(1.5.dp, AccentCyan, CircleShape),
+                .background(SurfaceElevated)
+                .border(1.dp, BorderMedium, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "SX",
-                color = AccentCyan,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.sp
+                text = "S",
+                color = TextPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.SansSerif
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         Text(
-            text = "━━〔 ꜱᴀꜱᴜᴋᴇX 〕━━",
+            text = "SasukeX",
             color = TextPrimary,
-            fontSize = 21.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Autonomous Personal AI Assistant",
+            text = "How can I help you today?",
             color = TextSecondary,
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        // Model Badge Chip
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(SurfaceContainerHighDark)
-                .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
-                .padding(horizontal = 12.dp, vertical = 5.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .background(AccentCyan)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = activeModel,
-                    color = AccentCyan,
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        // Starter Prompt Cards
+        // Clean Prompts List
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             starterPrompts.forEachIndexed { index, item ->
                 StarterCard(
@@ -183,28 +154,20 @@ private fun StarterCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(SurfaceContainerDark)
-            .border(1.dp, BorderSubtle, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceElevated)
+            .border(1.dp, BorderSubtle, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(14.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
             .testTag(testTag),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(SurfaceContainerHighDark),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = null,
-                tint = AccentIndigo,
-                modifier = Modifier.size(20.dp)
-            )
-        }
+        Icon(
+            imageVector = item.icon,
+            contentDescription = null,
+            tint = TextSecondary,
+            modifier = Modifier.size(18.dp)
+        )
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -212,7 +175,7 @@ private fun StarterCard(
             Text(
                 text = item.title,
                 color = TextPrimary,
-                fontSize = 14.sp,
+                fontSize = 13.5.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(2.dp))

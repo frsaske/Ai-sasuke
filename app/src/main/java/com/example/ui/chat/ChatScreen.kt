@@ -1,13 +1,9 @@
 package com.example.ui.chat
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,7 +15,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,8 +23,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -39,6 +37,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
@@ -53,25 +52,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.data.local.AppSettingsManager
 import com.example.ui.components.ChatHistoryDrawerContent
 import com.example.ui.components.EmptyStateView
 import com.example.ui.components.MessageBubble
 import com.example.ui.components.MessageComposer
 import com.example.ui.settings.SettingsScreen
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentIndigo
+import com.example.ui.theme.BorderMedium
 import com.example.ui.theme.BorderSubtle
 import com.example.ui.theme.ObsidianBg
 import com.example.ui.theme.SurfaceContainerDark
 import com.example.ui.theme.SurfaceDark
+import com.example.ui.theme.SurfaceElevated
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.TextSecondary
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -87,6 +88,7 @@ fun MainAppContainer(
     modifier: Modifier = Modifier
 ) {
     var currentScreen by remember { mutableStateOf(AppScreen.CHAT) }
+    var showModelPicker by remember { mutableStateOf(false) }
 
     val conversations by viewModel.conversations.collectAsStateWithLifecycle()
     val activeConversationId by viewModel.activeConversationId.collectAsStateWithLifecycle()
@@ -100,7 +102,6 @@ fun MainAppContainer(
     val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
-    // Smart auto-scroll logic
     val isNearBottom by remember {
         derivedStateOf {
             val totalItems = listState.layoutInfo.totalItemsCount
@@ -114,7 +115,6 @@ fun MainAppContainer(
 
     LaunchedEffect(viewModel.scrollToBottomEvent) {
         viewModel.scrollToBottomEvent.collectLatest {
-            // Only auto-scroll if user hasn't manually scrolled up and isn't actively dragging
             if (isNearBottom && !listState.isScrollInProgress) {
                 if (messages.isNotEmpty()) {
                     listState.animateScrollToItem(messages.size - 1)
@@ -123,14 +123,75 @@ fun MainAppContainer(
         }
     }
 
-    // Scroll down on new user message
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
         }
     }
 
-    // Back handling for Settings
+    // Quick Model Switcher Dialog
+    if (showModelPicker) {
+        AlertDialog(
+            onDismissRequest = { showModelPicker = false },
+            title = { Text("Select Model", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SurfaceDark)
+                ) {
+                    AppSettingsManager.AVAILABLE_MODELS.forEachIndexed { index, modelOption ->
+                        val isSelected = modelOption.id == currentModel
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.selectModel(modelOption.id)
+                                    showModelPicker = false
+                                }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = modelOption.displayName,
+                                    color = TextPrimary,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.height(1.dp))
+                                Text(
+                                    text = modelOption.description,
+                                    color = TextMuted,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = TextPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        if (index < AppSettingsManager.AVAILABLE_MODELS.size - 1) {
+                            HorizontalDivider(color = BorderSubtle, thickness = 0.6.dp)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showModelPicker = false }) {
+                    Text("Close", color = TextPrimary)
+                }
+            },
+            containerColor = SurfaceElevated
+        )
+    }
+
+    // Settings Navigation
     if (currentScreen == AppScreen.SETTINGS) {
         BackHandler { currentScreen = AppScreen.CHAT }
         SettingsScreen(
@@ -163,7 +224,7 @@ fun MainAppContainer(
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = SurfaceDark,
-                modifier = Modifier.width(320.dp)
+                modifier = Modifier.width(310.dp)
             ) {
                 ChatHistoryDrawerContent(
                     conversations = conversations,
@@ -192,83 +253,88 @@ fun MainAppContainer(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = "━━〔 ꜱᴀꜱᴜᴋᴇX 〕━━",
-                                color = TextPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
-                                letterSpacing = 1.sp
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            // Model indicator pill
-                            Box(
+                Column {
+                    TopAppBar(
+                        title = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(SurfaceContainerDark)
-                                    .border(0.8.dp, BorderSubtle, RoundedCornerShape(10.dp))
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { showModelPicker = true }
+                                    .padding(horizontal = 6.dp, vertical = 4.dp)
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(5.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isGenerating) AccentIndigo else AccentCyan)
-                                    )
-                                    Spacer(modifier = Modifier.width(5.dp))
-                                    Text(
-                                        text = currentModel,
-                                        color = TextMuted,
-                                        fontSize = 10.sp,
-                                        fontFamily = FontFamily.Monospace
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = { coroutineScope.launch { drawerState.open() } },
-                            modifier = Modifier.testTag("open_history_drawer_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "Chat History",
-                                tint = TextPrimary
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = { viewModel.startNewChat() },
-                            modifier = Modifier.testTag("top_bar_new_chat_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "New Chat",
-                                tint = TextPrimary
-                            )
-                        }
+                                Text(
+                                    text = "SasukeX",
+                                    color = TextPrimary,
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
 
-                        IconButton(
-                            onClick = { currentScreen = AppScreen.SETTINGS },
-                            modifier = Modifier.testTag("top_bar_settings_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings",
-                                tint = TextPrimary
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = ObsidianBg
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                val modelShortName = when (currentModel) {
+                                    "gemini-3.5-flash" -> "3.5 Flash"
+                                    "gemini-3.1-pro-preview" -> "3.1 Pro"
+                                    "gemini-3.1-flash-lite-preview" -> "Flash-Lite"
+                                    else -> currentModel
+                                }
+
+                                Text(
+                                    text = modelShortName,
+                                    color = TextMuted,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Switch model",
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(
+                                onClick = { coroutineScope.launch { drawerState.open() } },
+                                modifier = Modifier.testTag("open_history_drawer_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Menu,
+                                    contentDescription = "Chats",
+                                    tint = TextPrimary
+                                )
+                            }
+                        },
+                        actions = {
+                            IconButton(
+                                onClick = { viewModel.startNewChat() },
+                                modifier = Modifier.testTag("top_bar_new_chat_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "New Chat",
+                                    tint = TextPrimary
+                                )
+                            }
+
+                            IconButton(
+                                onClick = { currentScreen = AppScreen.SETTINGS },
+                                modifier = Modifier.testTag("top_bar_settings_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Settings",
+                                    tint = TextPrimary
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = ObsidianBg
+                        )
                     )
-                )
+                    HorizontalDivider(color = BorderSubtle, thickness = 0.6.dp)
+                }
             },
             bottomBar = {
                 MessageComposer(
@@ -303,7 +369,7 @@ fun MainAppContainer(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = 8.dp)
+                            .padding(bottom = 6.dp)
                             .testTag("messages_lazy_column")
                     ) {
                         items(messages, key = { it.id }) { message ->

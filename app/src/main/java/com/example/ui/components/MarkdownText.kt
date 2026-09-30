@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,13 +47,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentIndigoLight
 import com.example.ui.theme.BorderSubtle
 import com.example.ui.theme.CodeBlockBg
 import com.example.ui.theme.CodeBlockHeader
 import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.SurfaceContainerDark
+import com.example.ui.theme.SurfaceContainerHighDark
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -83,17 +81,17 @@ fun MarkdownContent(
             when (element) {
                 is MarkdownElement.Header -> {
                     val fontSize = when (element.level) {
-                        1 -> 20.sp
-                        2 -> 18.sp
-                        else -> 16.sp
+                        1 -> 19.sp
+                        2 -> 17.sp
+                        else -> 15.5.sp
                     }
                     Text(
                         text = element.text,
                         fontSize = fontSize,
                         fontWeight = FontWeight.Bold,
-                        color = if (element.level == 1) AccentCyan else textColor,
-                        lineHeight = (fontSize.value * 1.3).sp,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                        color = TextPrimary,
+                        lineHeight = (fontSize.value * 1.35).sp,
+                        modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
                     )
                 }
                 is MarkdownElement.Paragraph -> {
@@ -105,7 +103,7 @@ fun MarkdownContent(
                 is MarkdownElement.BulletList -> {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(start = 8.dp)
+                        modifier = Modifier.padding(start = 6.dp)
                     ) {
                         element.items.forEach { item ->
                             Row(
@@ -114,7 +112,7 @@ fun MarkdownContent(
                             ) {
                                 Text(
                                     text = "•",
-                                    color = AccentCyan,
+                                    color = TextSecondary,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(end = 8.dp)
@@ -148,7 +146,7 @@ fun RichFormattedText(
             var i = 0
             val len = text.length
             while (i < len) {
-                // Check for inline code `...`
+                // Inline code `...`
                 if (text[i] == '`' && i + 1 < len) {
                     val nextBacktick = text.indexOf('`', i + 1)
                     if (nextBacktick != -1) {
@@ -156,10 +154,10 @@ fun RichFormattedText(
                         withStyle(
                             SpanStyle(
                                 fontFamily = FontFamily.Monospace,
-                                background = SurfaceContainerDark,
-                                color = AccentIndigoLight,
+                                background = SurfaceContainerHighDark,
+                                color = TextPrimary,
                                 fontSize = 13.5.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Medium
                             )
                         ) {
                             append(" $inlineCode ")
@@ -169,12 +167,12 @@ fun RichFormattedText(
                     }
                 }
 
-                // Check for bold **...**
+                // Bold **...**
                 if (i + 1 < len && text[i] == '*' && text[i + 1] == '*') {
                     val endBold = text.indexOf("**", i + 2)
                     if (endBold != -1) {
                         val boldText = text.substring(i + 2, endBold)
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = textColor)) {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = TextPrimary)) {
                             append(boldText)
                         }
                         i = endBold + 2
@@ -182,7 +180,7 @@ fun RichFormattedText(
                     }
                 }
 
-                // Check for italic *...*
+                // Italic *...*
                 if (text[i] == '*' && (i + 1 < len && text[i + 1] != '*')) {
                     val endItalic = text.indexOf('*', i + 1)
                     if (endItalic != -1 && endItalic > i + 1) {
@@ -204,7 +202,7 @@ fun RichFormattedText(
     Text(
         text = annotatedString,
         fontSize = 15.sp,
-        lineHeight = 22.sp,
+        lineHeight = 23.sp,
         color = textColor,
         modifier = modifier
     )
@@ -229,32 +227,32 @@ fun CodeBlockCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(CodeBlockBg)
-            .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
+            .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
     ) {
-        // Header
+        // Top bar of code editor
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(CodeBlockHeader)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = language.ifBlank { "code" }.lowercase(),
-                color = AccentCyan,
+                color = TextSecondary,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Medium
             )
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
             ) {
                 IconButton(
                     onClick = {
@@ -264,7 +262,7 @@ fun CodeBlockCard(
                         copied = true
                     },
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(26.dp)
                         .testTag("copy_code_button")
                 ) {
                     if (copied) {
@@ -272,28 +270,28 @@ fun CodeBlockCard(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Copied",
                             tint = SuccessGreen,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
                             contentDescription = "Copy Code",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(16.dp)
+                            tint = TextMuted,
+                            modifier = Modifier.size(15.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.width(4.dp))
                 AnimatedVisibility(
                     visible = copied,
                     enter = fadeIn(),
                     exit = fadeOut()
                 ) {
                     Text(
-                        text = "Copied!",
+                        text = "Copied",
                         color = SuccessGreen,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(start = 4.dp)
                     )
                 }
             }
@@ -304,7 +302,7 @@ fun CodeBlockCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(12.dp)
+                .padding(14.dp)
         ) {
             Text(
                 text = code,

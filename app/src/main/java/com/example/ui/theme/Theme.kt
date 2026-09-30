@@ -11,16 +11,16 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val SasukeXDarkColorScheme = darkColorScheme(
-    primary = AccentIndigo,
-    onPrimary = TextPrimary,
+    primary = AccentPrimary,
+    onPrimary = ObsidianBg,
     primaryContainer = SurfaceContainerHighDark,
-    onPrimaryContainer = AccentIndigoLight,
-    secondary = AccentCyan,
+    onPrimaryContainer = TextPrimary,
+    secondary = AccentSecondary,
     onSecondary = ObsidianBg,
     secondaryContainer = SurfaceContainerDark,
-    onSecondaryContainer = AccentCyan,
-    tertiary = AccentPurple,
-    onTertiary = TextPrimary,
+    onSecondaryContainer = TextPrimary,
+    tertiary = AccentSecondary,
+    onTertiary = ObsidianBg,
     background = ObsidianBg,
     onBackground = TextPrimary,
     surface = SurfaceDark,
@@ -37,7 +37,7 @@ private val SasukeXDarkColorScheme = darkColorScheme(
 
 @Composable
 fun SasukeXTheme(
-    darkTheme: Boolean = true, // Dark-first interface requested
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = SasukeXDarkColorScheme
@@ -59,7 +59,6 @@ fun SasukeXTheme(
     )
 }
 
-// Backward compatibility alias
 @Composable
 fun MyApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

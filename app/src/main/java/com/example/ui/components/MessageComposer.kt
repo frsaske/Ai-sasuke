@@ -1,12 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -22,7 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -38,21 +31,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentIndigo
 import com.example.ui.theme.BorderMedium
 import com.example.ui.theme.BorderSubtle
-import com.example.ui.theme.ErrorRed
 import com.example.ui.theme.SurfaceContainerDark
 import com.example.ui.theme.SurfaceContainerHighDark
 import com.example.ui.theme.SurfaceDark
+import com.example.ui.theme.SurfaceElevated
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -66,94 +56,82 @@ fun MessageComposer(
     onStop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isFocused by remember { mutableStateOf(false) }
     var showAttachmentDialog by remember { mutableStateOf(false) }
-
     val canSend = text.isNotBlank() && !isGenerating
-
-    val borderColor by animateColorAsState(
-        targetValue = when {
-            isGenerating -> AccentCyan.copy(alpha = 0.5f)
-            isFocused -> AccentIndigo.copy(alpha = 0.7f)
-            else -> BorderSubtle
-        },
-        animationSpec = tween(250),
-        label = "composer_border"
-    )
 
     if (showAttachmentDialog) {
         AlertDialog(
             onDismissRequest = { showAttachmentDialog = false },
             title = {
                 Text(
-                    text = "Agent Tools & Attachments",
+                    text = "Tools & Attachments",
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp
+                    fontSize = 16.sp
                 )
             },
             text = {
                 Text(
-                    text = "File attachments and external integrations (GitHub, Google Drive, Gmail, Terminal) are architected and will be activated in upcoming agent updates.\n\nSasukeX currently processes all conversational queries and code generation via Google Gemini.",
+                    text = "Agent tools (GitHub, Google Drive, Gmail, Terminal) are architected and will be activated in upcoming updates.\n\nSasukeX is ready to generate and answer your prompts.",
                     color = TextSecondary,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
+                    fontSize = 13.5.sp,
+                    lineHeight = 19.sp
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showAttachmentDialog = false }) {
-                    Text("Got it", color = AccentCyan)
+                    Text("OK", color = TextPrimary)
                 }
             },
-            containerColor = SurfaceContainerHighDark
+            containerColor = SurfaceElevated
         )
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(26.dp))
-                .background(SurfaceDark)
-                .border(1.2.dp, borderColor, RoundedCornerShape(26.dp))
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .background(SurfaceElevated)
+                .border(1.dp, BorderMedium, RoundedCornerShape(26.dp))
+                .padding(horizontal = 6.dp, vertical = 5.dp),
             verticalAlignment = Alignment.Bottom
         ) {
-            // Attachment Button
+            // Attachment Plus Icon
             IconButton(
                 onClick = { showAttachmentDialog = true },
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(38.dp)
+                    .clip(CircleShape)
                     .testTag("attachment_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.AttachFile,
-                    contentDescription = "Attach File",
-                    tint = TextMuted,
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add attachment",
+                    tint = TextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
 
             Spacer(modifier = Modifier.width(4.dp))
 
-            // Multiline Text Field
+            // Text Input Field
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = 40.dp, max = 130.dp)
-                    .padding(vertical = 10.dp),
+                    .heightIn(min = 38.dp, max = 130.dp)
+                    .padding(vertical = 9.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 if (text.isEmpty()) {
                     Text(
-                        text = "Message SasukeX...",
+                        text = "Message...",
                         color = TextMuted,
-                        fontSize = 15.sp,
-                        lineHeight = 20.sp
+                        fontSize = 15.sp
                     )
                 }
 
@@ -163,62 +141,57 @@ fun MessageComposer(
                     textStyle = LocalTextStyle.current.copy(
                         color = TextPrimary,
                         fontSize = 15.sp,
-                        lineHeight = 20.sp
+                        lineHeight = 21.sp
                     ),
-                    cursorBrush = SolidColor(AccentCyan),
+                    cursorBrush = SolidColor(Color.White),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onFocusChanged { isFocused = it.isFocused }
                         .testTag("message_input_field")
                 )
             }
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            // Dynamic Action Button (Send or Stop)
+            // Circular Action Button
             Box(
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier
+                    .size(38.dp)
+                    .padding(1.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (isGenerating) {
-                    // Stop Button
                     IconButton(
                         onClick = onStop,
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(34.dp)
                             .clip(CircleShape)
-                            .background(ErrorRed)
+                            .background(Color.White)
                             .testTag("stop_generation_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Stop,
-                            contentDescription = "Stop Generating",
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
+                            contentDescription = "Stop",
+                            tint = Color.Black,
+                            modifier = Modifier.size(17.dp)
                         )
                     }
                 } else {
-                    // Send Button
                     IconButton(
                         onClick = {
-                            if (canSend) {
-                                onSend()
-                            }
+                            if (canSend) onSend()
                         },
                         enabled = canSend,
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(34.dp)
                             .clip(CircleShape)
-                            .background(
-                                if (canSend) AccentIndigo else SurfaceContainerDark
-                            )
+                            .background(if (canSend) Color.White else SurfaceContainerHighDark)
                             .testTag("send_message_button")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send Message",
-                            tint = if (canSend) Color.White else TextMuted,
-                            modifier = Modifier.size(18.dp)
+                            contentDescription = "Send",
+                            tint = if (canSend) Color.Black else TextMuted,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

@@ -1,6 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,7 +29,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -46,22 +44,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.Conversation
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.AccentIndigo
 import com.example.ui.theme.BorderMedium
 import com.example.ui.theme.BorderSubtle
 import com.example.ui.theme.ErrorRed
-import com.example.ui.theme.ObsidianBg
 import com.example.ui.theme.SurfaceContainerDark
 import com.example.ui.theme.SurfaceContainerHighDark
 import com.example.ui.theme.SurfaceDark
+import com.example.ui.theme.SurfaceElevated
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -96,14 +92,14 @@ fun ChatHistoryDrawerContent(
     renameTarget?.let { conv ->
         AlertDialog(
             onDismissRequest = { renameTarget = null },
-            title = { Text("Rename Chat", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            title = { Text("Rename Chat", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
             text = {
                 OutlinedTextField(
                     value = renameInput,
                     onValueChange = { renameInput = it },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentCyan,
+                        focusedBorderColor = Color.White,
                         unfocusedBorderColor = BorderSubtle,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
@@ -119,7 +115,7 @@ fun ChatHistoryDrawerContent(
                         }
                         renameTarget = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentIndigo)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black)
                 ) {
                     Text("Save")
                 }
@@ -129,7 +125,7 @@ fun ChatHistoryDrawerContent(
                     Text("Cancel", color = TextMuted)
                 }
             },
-            containerColor = SurfaceContainerHighDark
+            containerColor = SurfaceElevated
         )
     }
 
@@ -137,10 +133,10 @@ fun ChatHistoryDrawerContent(
     deleteTarget?.let { conv ->
         AlertDialog(
             onDismissRequest = { deleteTarget = null },
-            title = { Text("Delete Chat?", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            title = { Text("Delete Chat", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
             text = {
                 Text(
-                    "Are you sure you want to delete \"${conv.title}\"? This action cannot be undone.",
+                    "Delete \"${conv.title}\"?",
                     color = TextSecondary,
                     fontSize = 14.sp
                 )
@@ -151,7 +147,7 @@ fun ChatHistoryDrawerContent(
                         onDeleteConversation(conv.id)
                         deleteTarget = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed, contentColor = Color.White)
                 ) {
                     Text("Delete")
                 }
@@ -161,7 +157,7 @@ fun ChatHistoryDrawerContent(
                     Text("Cancel", color = TextMuted)
                 }
             },
-            containerColor = SurfaceContainerHighDark
+            containerColor = SurfaceElevated
         )
     }
 
@@ -169,10 +165,10 @@ fun ChatHistoryDrawerContent(
     if (showClearAllDialog) {
         AlertDialog(
             onDismissRequest = { showClearAllDialog = false },
-            title = { Text("Clear All Chats?", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            title = { Text("Clear All Chats", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
             text = {
                 Text(
-                    "This will permanently delete all stored local conversations and messages from this device.",
+                    "Permanently delete all stored chats from this device?",
                     color = TextSecondary,
                     fontSize = 14.sp
                 )
@@ -183,7 +179,7 @@ fun ChatHistoryDrawerContent(
                         onClearAllConversations()
                         showClearAllDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed, contentColor = Color.White)
                 ) {
                     Text("Clear All")
                 }
@@ -193,16 +189,16 @@ fun ChatHistoryDrawerContent(
                     Text("Cancel", color = TextMuted)
                 }
             },
-            containerColor = SurfaceContainerHighDark
+            containerColor = SurfaceElevated
         )
     }
 
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .width(320.dp)
+            .width(310.dp)
             .background(SurfaceDark)
-            .padding(top = 16.dp, bottom = 16.dp)
+            .padding(top = 16.dp, bottom = 12.dp)
     ) {
         // Top Header
         Row(
@@ -212,96 +208,91 @@ fun ChatHistoryDrawerContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                Text(
-                    text = "━━〔 ꜱᴀꜱᴜᴋᴇX 〕━━",
-                    color = TextPrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
-                )
-                Text(
-                    text = "Conversation History",
-                    color = TextMuted,
-                    fontSize = 12.sp
-                )
-            }
+            Text(
+                text = "Chats",
+                color = TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
 
             IconButton(
                 onClick = onCloseDrawer,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(34.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Close Drawer",
-                    tint = TextSecondary
+                    contentDescription = "Close",
+                    tint = TextSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // New Chat Button
-        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Button(
-                onClick = {
-                    onNewChat()
-                    onCloseDrawer()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .testTag("drawer_new_chat_button"),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentIndigo),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("New Conversation", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        // New Chat Button
+        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceElevated)
+                    .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
+                    .clickable {
+                        onNewChat()
+                        onCloseDrawer()
+                    }
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .testTag("drawer_new_chat_button"),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(10.dp))
+                Text("New chat", color = TextPrimary, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         // Search Bar
         Box(modifier = Modifier.padding(horizontal = 16.dp)) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search history...", fontSize = 13.sp, color = TextMuted) },
+                placeholder = { Text("Search...", fontSize = 13.sp, color = TextMuted) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
                         tint = TextMuted,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear", tint = TextMuted, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Clear, contentDescription = "Clear", tint = TextMuted, modifier = Modifier.size(14.dp))
                         }
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(8.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentCyan,
+                    focusedBorderColor = BorderMedium,
                     unfocusedBorderColor = BorderSubtle,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary,
-                    focusedContainerColor = SurfaceContainerDark,
-                    unfocusedContainerColor = SurfaceContainerDark
+                    focusedContainerColor = SurfaceElevated,
+                    unfocusedContainerColor = SurfaceElevated
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
+                    .height(44.dp)
                     .testTag("search_history_input")
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         HorizontalDivider(color = BorderSubtle, thickness = 0.8.dp)
 
         // Conversations List
@@ -314,7 +305,7 @@ fun ChatHistoryDrawerContent(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (searchQuery.isBlank()) "No stored conversations yet." else "No matches found.",
+                    text = if (searchQuery.isBlank()) "No conversations yet" else "No matching chats",
                     color = TextMuted,
                     fontSize = 13.sp
                 )
@@ -324,25 +315,20 @@ fun ChatHistoryDrawerContent(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 items(filteredConversations, key = { it.id }) { conversation ->
                     val isActive = conversation.id == activeConversationId
                     val dateFormatted = remember(conversation.updatedAt) {
-                        SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(conversation.updatedAt))
+                        SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(conversation.updatedAt))
                     }
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isActive) SurfaceContainerHighDark else SurfaceContainerDark.copy(alpha = 0.5f))
-                            .border(
-                                1.dp,
-                                if (isActive) AccentCyan.copy(alpha = 0.8f) else BorderSubtle,
-                                RoundedCornerShape(10.dp)
-                            )
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isActive) SurfaceElevated else Color.Transparent)
                             .clickable {
                                 onSelectConversation(conversation.id)
                                 onCloseDrawer()
@@ -354,8 +340,8 @@ fun ChatHistoryDrawerContent(
                         Icon(
                             imageVector = Icons.Default.ChatBubbleOutline,
                             contentDescription = null,
-                            tint = if (isActive) AccentCyan else TextMuted,
-                            modifier = Modifier.size(16.dp)
+                            tint = if (isActive) TextPrimary else TextMuted,
+                            modifier = Modifier.size(15.dp)
                         )
 
                         Spacer(modifier = Modifier.width(10.dp))
@@ -369,7 +355,7 @@ fun ChatHistoryDrawerContent(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(1.dp))
                             Text(
                                 text = dateFormatted,
                                 color = TextMuted,
@@ -383,26 +369,26 @@ fun ChatHistoryDrawerContent(
                                 renameTarget = conversation
                                 renameInput = conversation.title
                             },
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
-                                contentDescription = "Rename Chat",
+                                contentDescription = "Rename",
                                 tint = TextMuted,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(13.dp)
                             )
                         }
 
                         // Delete Action
                         IconButton(
                             onClick = { deleteTarget = conversation },
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete Chat",
+                                contentDescription = "Delete",
                                 tint = TextMuted,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(13.dp)
                             )
                         }
                     }
@@ -416,22 +402,21 @@ fun ChatHistoryDrawerContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(
                 onClick = { showClearAllDialog = true },
-                colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed),
+                colors = ButtonDefaults.textButtonColors(contentColor = TextMuted),
                 modifier = Modifier.testTag("clear_all_chats_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.DeleteSweep,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Clear All Chats", fontSize = 13.sp)
+                Text("Clear history", fontSize = 12.5.sp)
             }
         }
     }

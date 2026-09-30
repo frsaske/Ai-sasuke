@@ -428,7 +428,7 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Tip: Google AI Studio recently started issuing 'AQ.' keys which have a temporary server-side issue (ACCESS_TOKEN_TYPE_UNSUPPORTED). If an 'AQ.' key fails, generate an 'AIza...' API key in Google Cloud Console under APIs & Services > Credentials.",
+                        text = "Supports both standard 'AIza...' and new Google AI Studio 'AQ.' keys using direct header authentication.",
                         color = TextMuted,
                         fontSize = 11.5.sp,
                         lineHeight = 16.sp

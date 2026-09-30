@@ -72,7 +72,6 @@ class GeminiClient {
         try {
             val response = apiService.streamGenerateContent(
                 model = model,
-                apiKeyHeader = apiKey,
                 apiKey = apiKey,
                 request = request
             )
@@ -173,7 +172,6 @@ class GeminiClient {
 
             val response = apiService.generateContent(
                 model = model,
-                apiKeyHeader = apiKey,
                 apiKey = apiKey,
                 request = testRequest
             )

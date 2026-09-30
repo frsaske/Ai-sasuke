@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import com.example.data.local.SecureStorageManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -100,7 +101,11 @@ fun SettingsScreen(
     onClearAllChats: () -> Unit,
     onResetAllSettings: () -> Unit,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    appSettingsManager: AppSettingsManager? = null,
+    secureStorageManager: SecureStorageManager? = null,
+    onTestSearx: (suspend (String) -> Result<String>)? = null,
+    onTestGitHub: (suspend () -> Result<String>)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -561,6 +566,17 @@ fun SettingsScreen(
                             .testTag("system_prompt_input")
                     )
                 }
+            }
+
+            // SECTION 3: AGENT TOOLS
+            if (appSettingsManager != null && secureStorageManager != null) {
+                AgentToolsSettingsSection(
+                    appSettingsManager = appSettingsManager,
+                    secureStorageManager = secureStorageManager,
+                    onTestSearx = onTestSearx ?: { Result.failure(Exception("SearXNG test not available")) },
+                    onTestGitHub = onTestGitHub ?: { Result.failure(Exception("GitHub test not available")) },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             // SECTION 4: DATA & MANAGEMENT

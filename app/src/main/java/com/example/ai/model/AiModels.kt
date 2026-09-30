@@ -20,6 +20,9 @@ data class Content(
 @JsonClass(generateAdapter = true)
 data class Part(
     val text: String? = null,
+    val thought: Boolean? = null,
+    @Json(name = "thought_signature") val thoughtSignature: String? = null,
+    @Json(name = "thoughtSignature") val thoughtSignatureCamel: String? = null,
     val functionCall: FunctionCall? = null,
     val functionResponse: FunctionResponse? = null
 )
@@ -35,6 +38,18 @@ data class FunctionResponse(
     val name: String,
     val response: Map<String, Any?>
 )
+
+fun Content.normalizedForNextTurn(): Content {
+    return this.copy(
+        parts = this.parts.map { part ->
+            val sig = part.thoughtSignature ?: part.thoughtSignatureCamel
+            part.copy(
+                thoughtSignature = sig,
+                thoughtSignatureCamel = null
+            )
+        }
+    )
+}
 
 @JsonClass(generateAdapter = true)
 data class ToolDeclaration(

@@ -23,6 +23,7 @@ val AccentIndigoLight = Color(0xFFCCCCCC)
 val AccentCyan = Color(0xFFE5E5E5) // clean platinum silver
 val AccentCyanGlow = Color(0x1AFFFFFF)
 val AccentPurple = Color(0xFFD4D4D4)
+val SasukeCrimson = Color(0xFFE11D48)
 
 // Neutral Text Hierarchy
 val TextPrimary = Color(0xFFF4F4F5)

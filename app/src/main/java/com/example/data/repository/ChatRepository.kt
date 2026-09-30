@@ -84,9 +84,31 @@ class ChatRepository(
         content: String,
         isStreaming: Boolean,
         isError: Boolean,
-        errorMessage: String? = null
+        errorMessage: String? = null,
+        activities: List<com.example.agent.model.ToolActivity> = emptyList(),
+        sources: List<com.example.agent.model.SourceCitation> = emptyList()
     ) = withContext(Dispatchers.IO) {
-        messageDao.updateMessageStatus(id, content, isStreaming, isError, errorMessage)
+        val dummyMessage = ChatMessage(
+            id = id,
+            conversationId = "",
+            role = com.example.data.model.MessageRole.ASSISTANT,
+            content = content,
+            isStreaming = isStreaming,
+            isError = isError,
+            errorMessage = errorMessage,
+            activities = activities,
+            sources = sources
+        )
+        val entity = dummyMessage.toEntity()
+        messageDao.updateMessageStatus(
+            id = id,
+            content = content,
+            isStreaming = isStreaming,
+            isError = isError,
+            errorMessage = errorMessage,
+            activitiesJson = entity.activitiesJson,
+            sourcesJson = entity.sourcesJson
+        )
     }
 
     suspend fun deleteMessage(id: String) = withContext(Dispatchers.IO) {

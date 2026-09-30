@@ -207,7 +207,11 @@ fun MainAppContainer(
             onSelectModel = { viewModel.selectModel(it) },
             onClearAllChats = { viewModel.clearAllConversations() },
             onResetAllSettings = { viewModel.resetAllSettings() },
-            onNavigateBack = { currentScreen = AppScreen.CHAT }
+            onNavigateBack = { currentScreen = AppScreen.CHAT },
+            appSettingsManager = viewModel.appSettingsManager,
+            secureStorageManager = viewModel.secureStorageManager,
+            onTestSearx = { viewModel.testSearxSearch(it) },
+            onTestGitHub = { viewModel.testGitHubConnection() }
         )
         return
     }
@@ -377,7 +381,13 @@ fun MainAppContainer(
                                 message = message,
                                 onRegenerate = { viewModel.regenerateResponse(message.id) },
                                 onDelete = { viewModel.deleteMessage(message.id) },
-                                onRetry = { viewModel.retryMessage(message.id) }
+                                onRetry = { viewModel.retryMessage(message.id) },
+                                onConfirmAction = { activity ->
+                                    viewModel.confirmToolAction(message.id, activity)
+                                },
+                                onCancelAction = { activity ->
+                                    viewModel.cancelToolAction(message.id, activity)
+                                }
                             )
                         }
                     }

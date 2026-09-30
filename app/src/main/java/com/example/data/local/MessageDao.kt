@@ -22,13 +22,15 @@ interface MessageDao {
     @Update
     suspend fun updateMessage(message: MessageEntity)
 
-    @Query("UPDATE messages SET content = :content, isStreaming = :isStreaming, isError = :isError, errorMessage = :errorMessage WHERE id = :id")
+    @Query("UPDATE messages SET content = :content, isStreaming = :isStreaming, isError = :isError, errorMessage = :errorMessage, activitiesJson = :activitiesJson, sourcesJson = :sourcesJson WHERE id = :id")
     suspend fun updateMessageStatus(
         id: String,
         content: String,
         isStreaming: Boolean,
         isError: Boolean,
-        errorMessage: String? = null
+        errorMessage: String? = null,
+        activitiesJson: String? = null,
+        sourcesJson: String? = null
     )
 
     @Query("DELETE FROM messages WHERE id = :id")

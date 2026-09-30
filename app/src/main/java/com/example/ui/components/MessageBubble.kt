@@ -75,6 +75,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+import com.example.agent.model.ToolActivity
+import com.example.ui.agent.AgentActivityCard
+import com.example.ui.agent.SourceCitationsView
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageBubble(
@@ -82,7 +86,9 @@ fun MessageBubble(
     onRegenerate: () -> Unit,
     onDelete: () -> Unit,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onConfirmAction: ((ToolActivity) -> Unit)? = null,
+    onCancelAction: ((ToolActivity) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showContextMenu by remember { mutableStateOf(false) }
@@ -257,11 +263,34 @@ fun MessageBubble(
                             }
                         }
                     } else {
+                        // AGENT ACTIVITIES
+                        if (message.activities.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                message.activities.forEach { act ->
+                                    AgentActivityCard(
+                                        activity = act,
+                                        onConfirmAction = onConfirmAction,
+                                        onCancelAction = onCancelAction
+                                    )
+                                }
+                            }
+                        }
+
                         if (message.content.isNotBlank()) {
                             MarkdownContent(content = message.content)
                         }
 
-                        if (message.isStreaming) {
+                        // SOURCE CITATIONS
+                        if (message.sources.isNotEmpty()) {
+                            SourceCitationsView(sources = message.sources)
+                        }
+
+                        if (message.isStreaming && message.activities.none { it.status == com.example.agent.model.ToolStatus.WAITING_CONFIRMATION }) {
                             TypingIndicator()
                         }
                     }

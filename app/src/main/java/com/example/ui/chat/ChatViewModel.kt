@@ -34,6 +34,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val appSettingsManager = AppSettingsManager(application)
     val aiService: AiService = GeminiAiServiceImpl()
 
+    val agentEngine = com.example.agent.engine.AgentEngine(
+        client = com.example.ai.service.GeminiClient(),
+        toolRegistry = com.example.agent.engine.ToolRegistry(
+            getSearxUrl = { appSettingsManager.getSearxUrl() },
+            getGitHubToken = { secureStorageManager.getGitHubToken() }
+        )
+    )
+
     // Conversations from DB
     val conversations: StateFlow<List<Conversation>> = chatRepository.allConversations
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -179,7 +187,47 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         regenerateResponse(messageId)
     }
 
-    private fun executeAiGeneration(conversationId: String, assistantMessageId: String) {
+    fun confirmToolAction(messageId: String, activity: com.example.agent.model.ToolActivity) {
+        val convId = _activeConversationId.value ?: return
+        if (_isGenerating.value) return
+
+        viewModelScope.launch {
+            chatRepository.updateMessageStatus(
+                id = messageId,
+                content = "",
+                isStreaming = true,
+                isError = false,
+                errorMessage = null
+            )
+            executeAiGeneration(convId, messageId, confirmedToolActivity = activity)
+        }
+    }
+
+    fun cancelToolAction(messageId: String, activity: com.example.agent.model.ToolActivity) {
+        viewModelScope.launch {
+            val updatedActivity = activity.copy(
+                status = com.example.agent.model.ToolStatus.FAILED,
+                resultSummary = "Action was cancelled by user"
+            )
+            val currentMsgs = chatRepository.getMessagesList(_activeConversationId.value ?: return@launch)
+            val target = currentMsgs.firstOrNull { it.id == messageId } ?: return@launch
+            val newActivities = target.activities.map { if (it.id == activity.id) updatedActivity else it }
+            chatRepository.updateMessageStatus(
+                id = messageId,
+                content = target.content.ifBlank { "Proposed change was cancelled." },
+                isStreaming = false,
+                isError = false,
+                activities = newActivities,
+                sources = target.sources
+            )
+        }
+    }
+
+    private fun executeAiGeneration(
+        conversationId: String,
+        assistantMessageId: String,
+        confirmedToolActivity: com.example.agent.model.ToolActivity? = null
+    ) {
         generationJob?.cancel()
         _isGenerating.value = true
 
@@ -191,43 +239,120 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val history = chatRepository.getMessagesList(conversationId)
                 .filter { it.id != assistantMessageId && !it.isError }
 
+            val isWebEnabled = appSettingsManager.isWebSearchEnabled()
+            val isGitHubEnabled = secureStorageManager.hasGitHubToken()
+            val isWeatherEnabled = appSettingsManager.isWeatherEnabled()
+            val isWikipediaEnabled = appSettingsManager.isWikipediaEnabled()
+            val isCurrencyEnabled = appSettingsManager.isCurrencyEnabled()
+            val isTimeEnabled = appSettingsManager.isTimeEnabled()
+            val showAgentActivity = appSettingsManager.isShowAgentActivityEnabled()
+            val requireConfirmation = appSettingsManager.isRequireConfirmationEnabled()
+
+            val activeDeclarations = agentEngine.toolRegistry.getActiveDeclarations(
+                isWebEnabled = isWebEnabled,
+                isGitHubEnabled = isGitHubEnabled,
+                isWeatherEnabled = isWeatherEnabled,
+                isWikipediaEnabled = isWikipediaEnabled,
+                isCurrencyEnabled = isCurrencyEnabled,
+                isTimeEnabled = isTimeEnabled
+            )
+
+            val currentActivities = mutableListOf<com.example.agent.model.ToolActivity>()
+            val currentSources = mutableListOf<com.example.agent.model.SourceCitation>()
             val accumulatedText = StringBuilder()
 
             try {
-                aiService.streamChatResponse(
+                agentEngine.runAgent(
                     conversationHistory = history,
                     systemPrompt = systemPrompt,
                     model = model,
-                    apiKey = apiKey
+                    apiKey = apiKey,
+                    activeTools = activeDeclarations,
+                    requireWriteConfirmation = requireConfirmation,
+                    confirmedToolActivity = confirmedToolActivity
                 ).collect { event ->
                     when (event) {
-                        is StreamEvent.Chunk -> {
+                        is com.example.agent.engine.AgentStepEvent.ToolAdded -> {
+                            if (showAgentActivity) {
+                                currentActivities.add(event.activity)
+                                chatRepository.updateMessageStatus(
+                                    id = assistantMessageId,
+                                    content = accumulatedText.toString(),
+                                    isStreaming = true,
+                                    isError = false,
+                                    activities = currentActivities.toList(),
+                                    sources = currentSources.toList()
+                                )
+                                _scrollToBottomEvent.tryEmit(Unit)
+                            }
+                        }
+                        is com.example.agent.engine.AgentStepEvent.ToolUpdated -> {
+                            if (showAgentActivity) {
+                                val idx = currentActivities.indexOfFirst { it.id == event.activity.id }
+                                if (idx >= 0) {
+                                    currentActivities[idx] = event.activity
+                                } else {
+                                    currentActivities.add(event.activity)
+                                }
+                                currentSources.addAll(event.activity.sources)
+                                chatRepository.updateMessageStatus(
+                                    id = assistantMessageId,
+                                    content = accumulatedText.toString(),
+                                    isStreaming = true,
+                                    isError = false,
+                                    activities = currentActivities.toList(),
+                                    sources = currentSources.distinctBy { it.url }
+                                )
+                                _scrollToBottomEvent.tryEmit(Unit)
+                            }
+                        }
+                        is com.example.agent.engine.AgentStepEvent.ToolNeedsConfirmation -> {
+                            currentActivities.add(event.activity)
+                            chatRepository.updateMessageStatus(
+                                id = assistantMessageId,
+                                content = accumulatedText.toString(),
+                                isStreaming = false,
+                                isError = false,
+                                activities = currentActivities.toList(),
+                                sources = currentSources.distinctBy { it.url }
+                            )
+                            _isGenerating.value = false
+                            _scrollToBottomEvent.tryEmit(Unit)
+                        }
+                        is com.example.agent.engine.AgentStepEvent.TextChunk -> {
                             accumulatedText.append(event.text)
                             chatRepository.updateMessageStatus(
                                 id = assistantMessageId,
                                 content = accumulatedText.toString(),
                                 isStreaming = true,
-                                isError = false
+                                isError = false,
+                                activities = currentActivities.toList(),
+                                sources = currentSources.distinctBy { it.url }
                             )
                             _scrollToBottomEvent.tryEmit(Unit)
                         }
-                        is StreamEvent.Completed -> {
+                        is com.example.agent.engine.AgentStepEvent.Completed -> {
+                            val finalSources = (currentSources + event.sources).distinctBy { it.url }
                             chatRepository.updateMessageStatus(
                                 id = assistantMessageId,
                                 content = event.fullText.ifBlank { accumulatedText.toString() },
                                 isStreaming = false,
-                                isError = false
+                                isError = false,
+                                activities = if (showAgentActivity) (currentActivities + event.activities).distinctBy { it.id } else emptyList(),
+                                sources = finalSources
                             )
                             _isGenerating.value = false
                             _scrollToBottomEvent.tryEmit(Unit)
                         }
-                        is StreamEvent.Error -> {
+                        is com.example.agent.engine.AgentStepEvent.Error -> {
                             chatRepository.updateMessageStatus(
                                 id = assistantMessageId,
                                 content = accumulatedText.toString(),
                                 isStreaming = false,
                                 isError = true,
-                                errorMessage = event.userMessage
+                                errorMessage = event.message,
+                                activities = currentActivities.toList(),
+                                sources = currentSources.toList()
                             )
                             _isGenerating.value = false
                         }
@@ -239,7 +364,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     content = accumulatedText.toString(),
                     isStreaming = false,
                     isError = true,
-                    errorMessage = e.localizedMessage ?: "Generation interrupted."
+                    errorMessage = e.localizedMessage ?: "Agent execution was interrupted.",
+                    activities = currentActivities.toList(),
+                    sources = currentSources.toList()
                 )
                 _isGenerating.value = false
             } finally {
@@ -311,6 +438,28 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun testConnection(key: String, model: String): Result<String> {
         val targetKey = key.ifBlank { secureStorageManager.getApiKey() }
         return aiService.testConnection(targetKey, model)
+    }
+
+    suspend fun testSearxSearch(query: String = "Android news"): Result<String> {
+        val tool = com.example.agent.tools.web.SearxWebSearchTool { appSettingsManager.getSearxUrl() }
+        val res = tool.execute(mapOf("query" to query))
+        return if (res.success) {
+            Result.success(res.summary)
+        } else {
+            Result.failure(Exception(res.error?.message ?: "SearXNG search failed"))
+        }
+    }
+
+    suspend fun testGitHubConnection(): Result<String> {
+        return agentEngine.toolRegistry.gitHubService.testConnection()
+    }
+
+    fun saveGitHubToken(token: String) {
+        secureStorageManager.saveGitHubToken(token)
+    }
+
+    fun clearGitHubToken() {
+        secureStorageManager.clearGitHubToken()
     }
 
     fun selectModel(model: String) {

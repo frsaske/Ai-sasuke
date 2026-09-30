@@ -132,4 +132,82 @@ class SecureStorageManager(context: Context) {
             .remove(KEY_IV)
             .apply()
     }
+
+    // --- GITHUB TOKEN STORAGE ---
+    private val KEY_ENCRYPTED_GITHUB_TOKEN = "encrypted_github_token"
+    private val KEY_GITHUB_IV = "github_token_iv"
+
+    fun saveGitHubToken(rawToken: String) {
+        val trimmed = rawToken.trim()
+        if (trimmed.isEmpty()) {
+            clearGitHubToken()
+            return
+        }
+        try {
+            val secretKey = getOrCreateSecretKey()
+            val cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION)
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+            val iv = cipher.iv
+            val encryptedBytes = cipher.doFinal(trimmed.toByteArray(Charsets.UTF_8))
+
+            val encryptedString = Base64.encodeToString(encryptedBytes, Base64.NO_WRAP)
+            val ivString = Base64.encodeToString(iv, Base64.NO_WRAP)
+
+            prefs.edit()
+                .putString(KEY_ENCRYPTED_GITHUB_TOKEN, encryptedString)
+                .putString(KEY_GITHUB_IV, ivString)
+                .apply()
+        } catch (e: Exception) {
+            val obfuscated = Base64.encodeToString(trimmed.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+            prefs.edit()
+                .putString(KEY_ENCRYPTED_GITHUB_TOKEN, obfuscated)
+                .putString(KEY_GITHUB_IV, "FALLBACK")
+                .apply()
+        }
+    }
+
+    fun getGitHubToken(): String {
+        val encryptedString = prefs.getString(KEY_ENCRYPTED_GITHUB_TOKEN, null)
+        val ivString = prefs.getString(KEY_GITHUB_IV, null)
+
+        if (encryptedString != null && ivString != null) {
+            try {
+                if (ivString == "FALLBACK") {
+                    val decoded = Base64.decode(encryptedString, Base64.NO_WRAP)
+                    return String(decoded, Charsets.UTF_8)
+                }
+                val secretKey = getOrCreateSecretKey()
+                val cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION)
+                val iv = Base64.decode(ivString, Base64.NO_WRAP)
+                val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
+                cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+                val encryptedBytes = Base64.decode(encryptedString, Base64.NO_WRAP)
+                val decrypted = cipher.doFinal(encryptedBytes)
+                val token = String(decrypted, Charsets.UTF_8)
+                if (token.isNotBlank()) return token
+            } catch (e: Exception) {
+                // Return empty if decryption fails
+            }
+        }
+        return ""
+    }
+
+    fun hasGitHubToken(): Boolean = getGitHubToken().isNotBlank()
+
+    fun getMaskedGitHubToken(): String {
+        val token = getGitHubToken()
+        if (token.isBlank()) return ""
+        return if (token.length > 8) {
+            "ghp_••••••••••••" + token.takeLast(4)
+        } else {
+            "ghp_••••••••••••"
+        }
+    }
+
+    fun clearGitHubToken() {
+        prefs.edit()
+            .remove(KEY_ENCRYPTED_GITHUB_TOKEN)
+            .remove(KEY_GITHUB_IV)
+            .apply()
+    }
 }

@@ -72,6 +72,7 @@ class GeminiClient {
         try {
             val response = apiService.streamGenerateContent(
                 model = model,
+                apiKeyHeader = apiKey,
                 apiKey = apiKey,
                 request = request
             )
@@ -172,6 +173,7 @@ class GeminiClient {
 
             val response = apiService.generateContent(
                 model = model,
+                apiKeyHeader = apiKey,
                 apiKey = apiKey,
                 request = testRequest
             )
@@ -194,8 +196,14 @@ class GeminiClient {
     private fun parseHttpError(code: Int, errorBody: String): Pair<AIErrorType, String> {
         val lower = errorBody.lowercase()
         return when {
+            lower.contains("access_token_type_unsupported") || lower.contains("expected oauth 2 access token") -> {
+                AIErrorType.INVALID_API_KEY to "Google's new 'AQ.' key format has a known Google server-side auth bug (ACCESS_TOKEN_TYPE_UNSUPPORTED). Use an 'AIza...' API key created in Google Cloud Console (APIs & Services > Credentials > Create API Key)."
+            }
+            lower.contains("api_key_service_blocked") -> {
+                AIErrorType.INVALID_API_KEY to "Generative Language API is blocked or not enabled for this key in Google Cloud. Please enable Generative Language API in your Google Cloud Console."
+            }
             code == 400 || code == 401 || code == 403 || lower.contains("api_key") || lower.contains("apikey") -> {
-                AIErrorType.INVALID_API_KEY to "Invalid or unauthorized API key. Please check your Gemini key in Settings."
+                AIErrorType.INVALID_API_KEY to "Invalid or unauthorized API key. If your key starts with 'AQ.', Google's server is rejecting it; use an 'AIza...' key from Google Cloud Console."
             }
             code == 429 || lower.contains("rate_limit") || lower.contains("resource_exhausted") -> {
                 AIErrorType.RATE_LIMIT to "Rate limit reached. Please wait a brief moment before sending another prompt."
@@ -207,7 +215,7 @@ class GeminiClient {
                 AIErrorType.QUOTA_EXCEEDED to "API quota exhausted for this key. Please check your Google AI Studio plan."
             }
             else -> {
-                AIErrorType.UNKNOWN to "Gemini service returned code $code. Please verify your settings and try again."
+                AIErrorType.UNKNOWN to "Gemini service returned code $code. Error: ${errorBody.take(120)}"
             }
         }
     }

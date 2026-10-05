@@ -61,37 +61,27 @@ class GeminiClient {
     ): retrofit2.Response<com.example.ai.model.GenerateContentResponse> {
         val cleanKey = apiKey.trim()
 
-        // 1. Primary standard method: key query parameter (universally supported by Gemini for AQ & AIza keys)
+        // 1. Official Gemini API authentication method: x-goog-api-key header.
         val firstResponse = apiService.generateContent(
             model = model,
-            apiKeyQuery = cleanKey,
-            apiKeyHeader = null,
+            apiKeyQuery = null,
+            apiKeyHeader = cleanKey,
             authHeader = null,
             request = request
         )
 
         if (firstResponse.isSuccessful) return firstResponse
 
-        // 2. If rejected with 400/401/403, retry with x-goog-api-key header
+        // 2. Compatibility fallback for older key configurations.
         if (firstResponse.code() in listOf(400, 401, 403)) {
             val headerResponse = apiService.generateContent(
                 model = model,
-                apiKeyQuery = null,
-                apiKeyHeader = cleanKey,
+                apiKeyQuery = cleanKey,
+                apiKeyHeader = null,
                 authHeader = null,
                 request = request
             )
             if (headerResponse.isSuccessful) return headerResponse
-
-            // 3. Fallback to Bearer authorization if user provided an OAuth token
-            val bearerResponse = apiService.generateContent(
-                model = model,
-                apiKeyQuery = null,
-                apiKeyHeader = null,
-                authHeader = "Bearer $cleanKey",
-                request = request
-            )
-            if (bearerResponse.isSuccessful) return bearerResponse
         }
 
         return firstResponse
@@ -107,37 +97,27 @@ class GeminiClient {
     ): retrofit2.Response<ResponseBody> {
         val cleanKey = apiKey.trim()
 
-        // 1. Primary standard method: key query parameter
+        // 1. Official Gemini API authentication method: x-goog-api-key header.
         val firstResponse = apiService.streamGenerateContent(
             model = model,
-            apiKeyQuery = cleanKey,
-            apiKeyHeader = null,
+            apiKeyQuery = null,
+            apiKeyHeader = cleanKey,
             authHeader = null,
             request = request
         )
 
         if (firstResponse.isSuccessful) return firstResponse
 
-        // 2. If rejected, fallback to x-goog-api-key header
+        // 2. Compatibility fallback for older key configurations.
         if (firstResponse.code() in listOf(400, 401, 403)) {
             val headerResponse = apiService.streamGenerateContent(
                 model = model,
-                apiKeyQuery = null,
-                apiKeyHeader = cleanKey,
+                apiKeyQuery = cleanKey,
+                apiKeyHeader = null,
                 authHeader = null,
                 request = request
             )
             if (headerResponse.isSuccessful) return headerResponse
-
-            // 3. Fallback to Bearer authorization
-            val bearerResponse = apiService.streamGenerateContent(
-                model = model,
-                apiKeyQuery = null,
-                apiKeyHeader = null,
-                authHeader = "Bearer $cleanKey",
-                request = request
-            )
-            if (bearerResponse.isSuccessful) return bearerResponse
         }
 
         return firstResponse

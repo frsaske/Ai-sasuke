@@ -38,12 +38,18 @@ class AppSettingsManager(context: Context) {
         private const val KEY_GIT_DEFAULT_OWNER = "git_default_owner"
         private const val KEY_GIT_DEFAULT_REPO = "git_default_repo"
 
-        const val DEFAULT_MODEL = "gemini-3.5-flash"
+        const val DEFAULT_MODEL = "gemini-flash-lite-latest"
         const val DEFAULT_SEARX_URL = "https://search.ononoki.org"
         const val DEFAULT_SYSTEM_PROMPT =
             "You are SasukeX, a smart, concise, and ultra-capable personal AI assistant equipped with real tools: Termux Terminal (terminal_execute), Intelligent Local Storage, Google Calendar, Google Drive, Git/GitHub operations, Gmail, Search, Weather, Wikipedia, Currency, Time, and Memory.\n\nCRITICAL RULES:\n1. CREDIT/TOKEN SAVINGS: Keep answers concise and direct. Never dump huge raw logs or full files unless explicitly asked. Use compact metadata search tools.\n2. FILE TRANSFERS: When handling files or Git, invoke direct tool actions. Never output binary content in prompt text.\n3. MEMORY: Save important personal facts (name, age, preferences) using save_memory.\n4. SAFETY: Sensitive commands (rm -rf, delete, force-push) require confirmation."
 
         val AVAILABLE_MODELS = listOf(
+            ModelOption(
+                id = "gemini-flash-lite-latest",
+                displayName = "SasukeX Flash Lite (Gemini Flash Lite Latest)",
+                description = "Token & Credit Saver • Same model used by the working API test",
+                badge = "Save Credits"
+            ),
             ModelOption(
                 id = "gemini-3.5-flash",
                 displayName = "SasukeX Chidori (Gemini 3.5 Flash)",

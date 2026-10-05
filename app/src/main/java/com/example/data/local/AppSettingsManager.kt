@@ -18,6 +18,7 @@ class AppSettingsManager(context: Context) {
     companion object {
         private const val PREFS_NAME = "sasukex_app_settings"
         private const val KEY_SELECTED_MODEL = "selected_gemini_model"
+        private const val KEY_FLASH_LITE_MIGRATION_DONE = "flash_lite_model_migration_done"
         private const val KEY_SYSTEM_PROMPT = "system_prompt"
 
         // Agent Tools keys
@@ -149,6 +150,13 @@ class AppSettingsManager(context: Context) {
 
     fun getSelectedModel(): String {
         val stored = prefs.getString(KEY_SELECTED_MODEL, DEFAULT_MODEL) ?: DEFAULT_MODEL
+        if (!prefs.getBoolean(KEY_FLASH_LITE_MIGRATION_DONE, false)) {
+            prefs.edit()
+                .putString(KEY_SELECTED_MODEL, DEFAULT_MODEL)
+                .putBoolean(KEY_FLASH_LITE_MIGRATION_DONE, true)
+                .apply()
+            return DEFAULT_MODEL
+        }
         return if (stored.startsWith("gemini-1.") || stored == "gemini-2.0-flash" || AVAILABLE_MODELS.none { it.id == stored }) {
             setSelectedModel(DEFAULT_MODEL)
             DEFAULT_MODEL

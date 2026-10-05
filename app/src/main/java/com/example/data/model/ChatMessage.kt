@@ -41,7 +41,11 @@ data class MessageEntity(
     val isError: Boolean = false,
     val errorMessage: String? = null,
     @ColumnInfo(defaultValue = "") val activitiesJson: String? = null,
-    @ColumnInfo(defaultValue = "") val sourcesJson: String? = null
+    @ColumnInfo(defaultValue = "") val sourcesJson: String? = null,
+    @ColumnInfo(defaultValue = "0") val promptTokens: Int? = null,
+    @ColumnInfo(defaultValue = "0") val candidatesTokens: Int? = null,
+    @ColumnInfo(defaultValue = "0") val totalTokens: Int? = null,
+    @ColumnInfo(defaultValue = "") val rawResponseJson: String? = null
 )
 
 data class ChatMessage(
@@ -54,7 +58,11 @@ data class ChatMessage(
     val isError: Boolean = false,
     val errorMessage: String? = null,
     val activities: List<ToolActivity> = emptyList(),
-    val sources: List<SourceCitation> = emptyList()
+    val sources: List<SourceCitation> = emptyList(),
+    val promptTokens: Int? = null,
+    val candidatesTokens: Int? = null,
+    val totalTokens: Int? = null,
+    val rawResponseJson: String? = null
 ) {
     fun toEntity(): MessageEntity {
         val activitiesStr = if (activities.isNotEmpty()) {
@@ -113,7 +121,11 @@ data class ChatMessage(
             isError = isError,
             errorMessage = errorMessage,
             activitiesJson = activitiesStr,
-            sourcesJson = sourcesStr
+            sourcesJson = sourcesStr,
+            promptTokens = promptTokens,
+            candidatesTokens = candidatesTokens,
+            totalTokens = totalTokens,
+            rawResponseJson = rawResponseJson
         )
     }
 
@@ -187,7 +199,11 @@ data class ChatMessage(
                 isError = entity.isError,
                 errorMessage = entity.errorMessage,
                 activities = parsedActivities,
-                sources = parsedSources
+                sources = parsedSources,
+                promptTokens = entity.promptTokens,
+                candidatesTokens = entity.candidatesTokens,
+                totalTokens = entity.totalTokens,
+                rawResponseJson = entity.rawResponseJson
             )
         }
     }

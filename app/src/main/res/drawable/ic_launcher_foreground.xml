@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/ic_sasukex_logo"
+        android:drawable="@drawable/sasukex_pro_icon_1791102098946"
         android:gravity="center" />
 </layer-list>

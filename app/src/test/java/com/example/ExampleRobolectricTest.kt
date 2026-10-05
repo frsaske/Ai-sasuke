@@ -19,9 +19,11 @@ class ExampleRobolectricTest {
     assertEquals("SasukeX", appName)
   }
 
+  @get:org.junit.Rule
+  val composeRule = androidx.compose.ui.test.junit4.createAndroidComposeRule<MainActivity>()
+
   @Test
-  fun `launch MainActivity`() {
-    val activityController = org.robolectric.Robolectric.buildActivity(MainActivity::class.java)
-    activityController.setup()
+  fun `render MainActivity full Compose tree`() {
+    composeRule.waitForIdle()
   }
 }

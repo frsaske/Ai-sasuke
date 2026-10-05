@@ -35,7 +35,11 @@ sealed class AgentStepEvent {
     data class Completed(
         val fullText: String,
         val sources: List<SourceCitation>,
-        val activities: List<ToolActivity>
+        val activities: List<ToolActivity>,
+        val promptTokens: Int? = null,
+        val candidatesTokens: Int? = null,
+        val totalTokens: Int? = null,
+        val rawJson: String? = null
     ) : AgentStepEvent()
     data class Error(val errorType: AIErrorType, val message: String) : AgentStepEvent()
 }
@@ -106,6 +110,7 @@ class AgentEngine(
                     status = if (result.success) ToolStatus.SUCCESS else ToolStatus.FAILED,
                     resultSummary = result.summary,
                     details = result.data?.toString() ?: result.error?.message,
+                    resultData = result.data,
                     sources = result.sources
                 )
                 emit(AgentStepEvent.ToolUpdated(completedActivity))
@@ -121,7 +126,9 @@ class AgentEngine(
                                     name = callName,
                                     args = confirmedToolActivity.arguments
                                 ),
-                                thoughtSignature = confirmedToolActivity.thoughtSignature
+                                thoughtSignature = confirmedToolActivity.thoughtSignature?.takeIf { 
+                                    it.isNotBlank() && it != "valid_thought_signature" 
+                                }
                             )
                         )
                     )
@@ -154,7 +161,7 @@ class AgentEngine(
             )
 
             val response = try {
-                client.apiService.generateContent(
+                client.executeGenerateContent(
                     model = model,
                     apiKey = apiKey,
                     request = request
@@ -168,7 +175,8 @@ class AgentEngine(
 
             if (!response.isSuccessful) {
                 val err = response.errorBody()?.string() ?: ""
-                emit(AgentStepEvent.Error(AIErrorType.UNKNOWN, "Gemini returned HTTP ${response.code()}: $err"))
+                val (errType, friendlyMsg) = client.parseHttpError(response.code(), err)
+                emit(AgentStepEvent.Error(errType, friendlyMsg))
                 return@flow
             }
 
@@ -192,7 +200,11 @@ class AgentEngine(
                     val call = part.functionCall!!
                     val toolName = call.name.removePrefix("default_api:").substringAfterLast(":")
                     val tool = toolRegistry.getTool(toolName) ?: toolRegistry.getTool(call.name)
-                    requireWriteConfirmation && tool?.requiresConfirmation == true
+                    val args = call.args ?: emptyMap()
+                    tool != null && (
+                        tool.requiresConfirmation(args) || 
+                        (requireWriteConfirmation && tool.permission == ToolPermission.WRITE)
+                    )
                 }
 
                 if (confirmationPart != null) {
@@ -260,6 +272,7 @@ class AgentEngine(
                         status = if (result.success) ToolStatus.SUCCESS else ToolStatus.FAILED,
                         resultSummary = result.summary,
                         details = result.data?.toString() ?: result.error?.message,
+                        resultData = result.data,
                         sources = result.sources
                     )
                     val existingIdx = activities.indexOfFirst { it.id == activityId }
@@ -279,11 +292,31 @@ class AgentEngine(
                 val textParts = candidateContent.parts.mapNotNull { it.text }
                 val fullAnswer = textParts.joinToString("\n")
                 emit(AgentStepEvent.TextChunk(fullAnswer))
+
+                val usage = response.body()?.usageMetadata
+                val promptTokens = usage?.promptTokenCount
+                val candidateTokens = usage?.candidatesTokenCount
+                val totalTokens = usage?.totalTokenCount ?: ((promptTokens ?: 0) + (candidateTokens ?: 0)).takeIf { it > 0 }
+
+                val rawJson = try {
+                    val moshi = com.squareup.moshi.Moshi.Builder()
+                        .add(com.example.ai.model.PartJsonAdapterFactory())
+                        .build()
+                    val adapter = moshi.adapter(com.example.ai.model.GenerateContentResponse::class.java).indent("  ")
+                    response.body()?.let { adapter.toJson(it) }
+                } catch (_: Exception) {
+                    null
+                }
+
                 emit(
                     AgentStepEvent.Completed(
                         fullText = fullAnswer,
                         sources = collectedSources.distinctBy { it.url },
-                        activities = activities
+                        activities = activities,
+                        promptTokens = promptTokens,
+                        candidatesTokens = candidateTokens,
+                        totalTokens = totalTokens,
+                        rawJson = rawJson
                     )
                 )
                 finalAnswerProduced = true
@@ -297,27 +330,74 @@ class AgentEngine(
 
     private fun getPresentationDetails(toolName: String, args: Map<String, Any?>): Pair<String, String> {
         return when (toolName) {
-            "web_search" -> "🔎 Searching the web" to (args["query"]?.toString() ?: "Searching...")
-            "fetch_url" -> "🌐 Reading webpage" to (args["url"]?.toString()?.take(50) ?: "Fetching content...")
-            "github_list_repos" -> "🐙 GitHub Repositories" to "Listing accessible repositories"
-            "github_repo_info" -> "🐙 GitHub Repo Info" to "${args["owner"]}/${args["repo"]}"
-            "github_list_files" -> "🐙 GitHub File Tree" to "${args["owner"]}/${args["repo"]} / ${args["path"] ?: ""}"
-            "github_read_file" -> "🐙 GitHub Reading File" to "${args["path"]} in ${args["owner"]}/${args["repo"]}"
-            "github_list_commits" -> "🐙 GitHub Commits" to "Recent commits for ${args["owner"]}/${args["repo"]}"
-            "github_list_issues" -> "🐙 GitHub Issues" to "${args["owner"]}/${args["repo"]}"
-            "github_list_branches" -> "🐙 GitHub Branches" to "${args["owner"]}/${args["repo"]}"
-            "github_list_releases" -> "🐙 GitHub Releases" to "${args["owner"]}/${args["repo"]}"
-            "github_create_issue" -> "🐙 Create Issue" to "${args["owner"]}/${args["repo"]} - ${args["title"]}"
-            "github_create_file" -> "✏️ Create File" to "${args["path"]} in ${args["owner"]}/${args["repo"]}"
-            "github_update_file" -> "✏️ Update File" to "${args["path"]} in ${args["owner"]}/${args["repo"]}"
-            "github_delete_file" -> "🗑️ Delete File" to "${args["path"]} from ${args["owner"]}/${args["repo"]}"
-            "github_create_branch" -> "🌿 Create Branch" to "${args["branch"]} in ${args["owner"]}/${args["repo"]}"
-            "github_create_pull_request" -> "🔀 Create Pull Request" to "${args["title"]} (${args["head"]} → ${args["base"]})"
-            "get_weather" -> "🌤 Weather Lookup" to (args["location"]?.toString() ?: "Current weather")
-            "wikipedia_search" -> "📖 Wikipedia Search" to (args["query"]?.toString() ?: "Wikipedia")
-            "exchange_rate" -> "💱 Currency Conversion" to "${args["base"]} to ${args["target"]}"
-            "current_time" -> "⏰ Current Time" to (args["timezone"]?.toString() ?: "Local time")
-            else -> "⚡ Tool Call" to toolName
+            "web_search" -> "Searching web" to (args["query"]?.toString() ?: "Searching...")
+            "fetch_url" -> "Reading webpage" to (args["url"]?.toString()?.take(50) ?: "Fetching content...")
+            "github_list_repos" -> "GitHub Repositories" to "Listing accessible repositories"
+            "github_repo_info" -> "GitHub Repository" to "${args["owner"]}/${args["repo"]}"
+            "github_list_files" -> "GitHub File Tree" to "${args["owner"]}/${args["repo"]} / ${args["path"] ?: ""}"
+            "github_read_file" -> "Reading GitHub File" to "${args["path"]} in ${args["owner"]}/${args["repo"]}"
+            "github_list_commits" -> "GitHub Commits" to "Recent commits for ${args["owner"]}/${args["repo"]}"
+            "github_list_issues" -> "GitHub Issues" to "${args["owner"]}/${args["repo"]}"
+            "github_list_branches" -> "GitHub Branches" to "${args["owner"]}/${args["repo"]}"
+            "github_list_releases" -> "GitHub Releases" to "${args["owner"]}/${args["repo"]}"
+            "github_create_issue" -> "Create Issue" to "${args["owner"]}/${args["repo"]} - ${args["title"]}"
+            "github_create_repo" -> "Creating Repository" to (args["name"]?.toString() ?: "New repository")
+            "github_delete_repo" -> "Deleting Repository" to "${args["owner"]}/${args["repo"]}"
+            "github_create_file" -> "Create File" to "${args["path"]} in ${args["owner"]}/${args["repo"]}"
+            "github_update_file" -> "Update File" to "${args["path"]} in ${args["owner"]}/${args["repo"]}"
+            "github_delete_file" -> "Delete File" to "${args["path"]} from ${args["owner"]}/${args["repo"]}"
+            "github_create_branch" -> "Create Branch" to "${args["branch"]} in ${args["owner"]}/${args["repo"]}"
+            "github_create_pull_request" -> "Create Pull Request" to "${args["title"]} (${args["head"]} → ${args["base"]})"
+            "github_download_file" -> "Downloading File" to "${args["path"]} from ${args["owner"]}/${args["repo"]}"
+            "github_upload_local_file" -> "Uploading File" to "${args["local_file_name"]} → ${args["owner"]}/${args["repo"]}/${args["path"]}"
+            "read_attached_file" -> "Reading Attached File" to "${args["file_name"]}"
+            "save_memory" -> "Saving User Memory" to (args["fact"]?.toString() ?: "Memory")
+            "gmail_list_messages" -> "Gmail Messages" to (args["query"]?.toString()?.ifBlank { "Listing emails" } ?: "Listing emails")
+            "gmail_read_message" -> "Reading Email" to "Message: ${args["message_id"]}"
+            "gmail_send_message" -> "Sending Email" to "To: ${args["to"]} • ${args["subject"]}"
+            "gmail_create_draft" -> "Drafting Email" to "To: ${args["to"]} • ${args["subject"]}"
+            "gmail_delete_message" -> "Deleting Email" to "Message: ${args["message_id"]}"
+            "gmail_modify_labels" -> "Updating Email Labels" to "Message: ${args["message_id"]}"
+            "get_weather" -> "Weather Lookup" to (args["location"]?.toString() ?: "Current weather")
+            "wikipedia_search" -> "Wikipedia Search" to (args["query"]?.toString() ?: "Wikipedia")
+            "exchange_rate" -> "Currency Conversion" to "${args["base"]} to ${args["target"]}"
+            "current_time" -> "Current Time" to (args["timezone"]?.toString() ?: "Local time")
+            "terminal_execute" -> "Terminal Command" to "$ ${args["command"]}"
+            "local_file_search" -> "Local File Search" to "${args["query"]}"
+            "local_file_read" -> "Reading Local File" to "${args["target"]}"
+            "local_file_create" -> "Creating Local File" to "${args["file_name"] ?: args["folder"]}"
+            "local_file_write" -> "Writing Local File" to "${args["target"]}"
+            "local_file_delete" -> "Deleting Local File" to "${args["target"]}"
+            "local_file_copy" -> "Copying File" to "${args["source"]} → ${args["destination_folder"]}"
+            "local_file_move" -> "Moving File" to "${args["source"]} → ${args["destination_folder"]}"
+            "local_file_rename" -> "Renaming File" to "${args["new_name"]}"
+            "local_folder_create" -> "Creating Folder" to "${args["folder_name"]}"
+            "local_folder_list" -> "Listing Folder" to "${args["folder"] ?: "workspace"}"
+            "local_file_open" -> "Opening File" to "${args["target"]}"
+            "calendar_list_events" -> "Calendar Events" to "Upcoming events"
+            "calendar_search_events" -> "Calendar Search" to "${args["query"]}"
+            "calendar_create_event" -> "Creating Calendar Event" to "${args["title"]} at ${args["start_time"]}"
+            "calendar_delete_event" -> "Deleting Calendar Event" to "Event #${args["event_id"]}"
+            "calendar_find_free_time" -> "Finding Free Slots" to "Looking for available slots"
+            "calendar_list_calendars" -> "Listing Calendars" to "Device calendars"
+            "drive_search" -> "Google Drive Search" to "${args["query"]}"
+            "drive_list_folder" -> "Drive Folder" to "${args["folder_id"] ?: "root"}"
+            "drive_get_metadata" -> "Drive Metadata" to "${args["file_id"]}"
+            "drive_read_text" -> "Reading Drive Doc" to "${args["file_id"]}"
+            "drive_download" -> "Downloading from Drive" to "${args["file_id"]}"
+            "drive_upload" -> "Uploading to Drive" to "${args["local_path"]}"
+            "drive_create_folder" -> "Creating Drive Folder" to "${args["name"]}"
+            "drive_rename" -> "Renaming Drive File" to "${args["new_name"]}"
+            "drive_trash" -> "Trashing Drive File" to "${args["file_id"]}"
+            "drive_share_link" -> "Drive Share Link" to "${args["file_id"]}"
+            "github_download_to_local" -> "GitHub Download" to "${args["repo"]}:${args["path"]}"
+            "github_upload_from_local" -> "GitHub Upload" to "${args["local_path"]} → ${args["repo"]}"
+            "github_clone_to_local" -> "Cloning Repository" to "${args["repo_url"]}"
+            "github_pull_to_local" -> "Git Pull" to "Pulling in ${args["folder"] ?: "workspace"}"
+            "github_commit_local_changes" -> "Git Commit" to "${args["message"]}"
+            "github_push_local_changes" -> "Git Push" to "Pushing to remote"
+            "universal_file_transfer" -> "File Transfer" to "${args["source_type"]} → ${args["dest_type"]}"
+            else -> "Action" to toolName
         }
     }
 
@@ -372,6 +452,24 @@ class AgentEngine(
                 toolName = toolName,
                 arguments = arguments
             )
+            "github_create_repo" -> ToolConfirmationPayload(
+                actionTitle = "Create GitHub Repository",
+                target = arguments["name"]?.toString() ?: "New repo",
+                previewTitle = if (arguments["private"] == true) "Visibility: Private" else "Visibility: Public",
+                previewContent = arguments["description"]?.toString()?.ifBlank { "Auto-init README: ${arguments["auto_init"] ?: true}" },
+                isDestructive = false,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "github_delete_repo" -> ToolConfirmationPayload(
+                actionTitle = "Delete Repository (Irreversible)",
+                target = "$owner/$repo",
+                previewTitle = "Permanent Repository Deletion",
+                previewContent = "This entire repository and all its files will be permanently deleted from GitHub.",
+                isDestructive = true,
+                toolName = toolName,
+                arguments = arguments
+            )
             "github_create_pull_request" -> ToolConfirmationPayload(
                 actionTitle = "Create Pull Request",
                 target = "$owner/$repo (${arguments["head"]} → ${arguments["base"]})",
@@ -385,6 +483,132 @@ class AgentEngine(
                 actionTitle = "Create New Branch",
                 target = "$owner/$repo : ${arguments["branch"]}",
                 previewTitle = "Base SHA: ${arguments["from_sha"]}",
+                isDestructive = false,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "github_upload_local_file" -> ToolConfirmationPayload(
+                actionTitle = "Upload Attached File",
+                target = "$owner/$repo : $path",
+                previewTitle = "Local file: ${arguments["local_file_name"]}",
+                previewContent = "Target commit: ${message.ifBlank { "Upload ${arguments["local_file_name"]}" }}",
+                isDestructive = false,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "gmail_send_message" -> ToolConfirmationPayload(
+                actionTitle = "Send Email",
+                target = "Recipient: ${arguments["to"]}",
+                previewTitle = "Subject: ${arguments["subject"]}",
+                previewContent = arguments["body"]?.toString()?.take(300),
+                isDestructive = false,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "gmail_create_draft" -> ToolConfirmationPayload(
+                actionTitle = "Create Draft Email",
+                target = "Recipient: ${arguments["to"]}",
+                previewTitle = "Subject: ${arguments["subject"]}",
+                previewContent = arguments["body"]?.toString()?.take(300),
+                isDestructive = false,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "gmail_delete_message" -> ToolConfirmationPayload(
+                actionTitle = if (arguments["permanent"] == true) "Permanently Delete Email" else "Move Email to Trash",
+                target = "Message ID: ${arguments["message_id"]}",
+                previewTitle = "Action: ${if (arguments["permanent"] == true) "Permanent Removal" else "Trash"}",
+                previewContent = "This message will be removed from your mailbox.",
+                isDestructive = true,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "gmail_modify_labels" -> ToolConfirmationPayload(
+                actionTitle = "Update Email Labels",
+                target = "Message ID: ${arguments["message_id"]}",
+                previewTitle = "Modify Labels",
+                previewContent = "Add: ${arguments["add_labels"] ?: "[]"} | Remove: ${arguments["remove_labels"] ?: "[]"}",
+                isDestructive = false,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "local_create_file" -> ToolConfirmationPayload(
+                actionTitle = "Create Local Workspace File",
+                target = arguments["path"]?.toString() ?: "File",
+                previewTitle = "Path: ${arguments["path"]}",
+                previewContent = arguments["content"]?.toString()?.take(300),
+                isDestructive = false,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "local_edit_file" -> ToolConfirmationPayload(
+                actionTitle = "Edit Local Workspace File",
+                target = arguments["path"]?.toString() ?: "File",
+                previewTitle = if (arguments["append"] == true) "Mode: Append" else "Mode: Overwrite",
+                previewContent = arguments["content"]?.toString()?.take(300),
+                isDestructive = false,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "local_delete_file", "local_file_delete" -> ToolConfirmationPayload(
+                actionTitle = "Delete Local File (Irreversible)",
+                target = arguments["target"]?.toString() ?: arguments["path"]?.toString() ?: "File",
+                previewTitle = "Delete Local File",
+                previewContent = "Permanently deletes '${arguments["target"] ?: arguments["path"]}' from local storage.",
+                isDestructive = true,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "local_file_write" -> ToolConfirmationPayload(
+                actionTitle = "Write / Overwrite Local File",
+                target = arguments["target"]?.toString() ?: "File",
+                previewTitle = if (arguments["append"] == true) "Mode: Append" else "Mode: Overwrite",
+                previewContent = arguments["content"]?.toString()?.take(300),
+                isDestructive = arguments["append"] != true,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "terminal_execute" -> ToolConfirmationPayload(
+                actionTitle = "Execute Terminal Command",
+                target = "$ ${arguments["command"]}",
+                previewTitle = if (com.example.termux.TermuxSafety.isDestructive(arguments["command"]?.toString() ?: "")) "⚠️ Destructive Shell Command" else "Shell Execution",
+                previewContent = "Directory: ${arguments["working_directory"] ?: "workspace"}\nCommand: ${arguments["command"]}",
+                isDestructive = com.example.termux.TermuxSafety.isDestructive(arguments["command"]?.toString() ?: ""),
+                toolName = toolName,
+                arguments = arguments
+            )
+            "github_push_local_changes" -> ToolConfirmationPayload(
+                actionTitle = "Push Changes to GitHub Remote",
+                target = "${arguments["remote"] ?: "origin"}/${arguments["branch"] ?: "main"}",
+                previewTitle = "Git Push",
+                previewContent = "Pushes local commits to the remote GitHub repository.",
+                isDestructive = true,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "drive_trash" -> ToolConfirmationPayload(
+                actionTitle = "Move Google Drive File to Trash",
+                target = "File ID: ${arguments["file_id"]}",
+                previewTitle = "Trash Drive File",
+                previewContent = "The file will be moved to Google Drive Trash.",
+                isDestructive = true,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "calendar_delete_event" -> ToolConfirmationPayload(
+                actionTitle = "Delete Google Calendar Event",
+                target = "Event ID: ${arguments["event_id"]}",
+                previewTitle = "Delete Event",
+                previewContent = "This event will be removed from your Google Calendar.",
+                isDestructive = true,
+                toolName = toolName,
+                arguments = arguments
+            )
+            "calendar_create_event" -> ToolConfirmationPayload(
+                actionTitle = "Create Google Calendar Event",
+                target = "${arguments["title"]} (${arguments["start_time"]})",
+                previewTitle = "Calendar Event Confirmation",
+                previewContent = "Attendees: ${arguments["attendees"] ?: "None"}\nLocation: ${arguments["location"] ?: "None"}",
                 isDestructive = false,
                 toolName = toolName,
                 arguments = arguments

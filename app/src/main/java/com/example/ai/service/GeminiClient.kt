@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody
 import okhttp3.logging.HttpLoggingInterceptor
 import org.json.JSONObject
 import retrofit2.Retrofit
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit
 class GeminiClient {
 
     private val moshi: Moshi = Moshi.Builder()
+        .add(com.example.ai.model.PartJsonAdapterFactory())
         .add(KotlinJsonAdapterFactory())
         .build()
 
@@ -47,6 +49,99 @@ class GeminiClient {
         .build()
 
     val apiService: GeminiApiService = retrofit.create(GeminiApiService::class.java)
+
+    /**
+     * Executes generateContent with intelligent dual-mode auth handling (query vs header)
+     * to eliminate Google's ACCESS_TOKEN_TYPE_UNSUPPORTED error for both AQ and AIza keys.
+     */
+    suspend fun executeGenerateContent(
+        model: String,
+        apiKey: String,
+        request: GenerateContentRequest
+    ): retrofit2.Response<com.example.ai.model.GenerateContentResponse> {
+        val cleanKey = apiKey.trim()
+
+        // 1. Primary standard method: key query parameter (universally supported by Gemini for AQ & AIza keys)
+        val firstResponse = apiService.generateContent(
+            model = model,
+            apiKeyQuery = cleanKey,
+            apiKeyHeader = null,
+            authHeader = null,
+            request = request
+        )
+
+        if (firstResponse.isSuccessful) return firstResponse
+
+        // 2. If rejected with 400/401/403, retry with x-goog-api-key header
+        if (firstResponse.code() in listOf(400, 401, 403)) {
+            val headerResponse = apiService.generateContent(
+                model = model,
+                apiKeyQuery = null,
+                apiKeyHeader = cleanKey,
+                authHeader = null,
+                request = request
+            )
+            if (headerResponse.isSuccessful) return headerResponse
+
+            // 3. Fallback to Bearer authorization if user provided an OAuth token
+            val bearerResponse = apiService.generateContent(
+                model = model,
+                apiKeyQuery = null,
+                apiKeyHeader = null,
+                authHeader = "Bearer $cleanKey",
+                request = request
+            )
+            if (bearerResponse.isSuccessful) return bearerResponse
+        }
+
+        return firstResponse
+    }
+
+    /**
+     * Executes streamGenerateContent with intelligent multi-stage auth fallback.
+     */
+    suspend fun executeStreamContent(
+        model: String,
+        apiKey: String,
+        request: GenerateContentRequest
+    ): retrofit2.Response<ResponseBody> {
+        val cleanKey = apiKey.trim()
+
+        // 1. Primary standard method: key query parameter
+        val firstResponse = apiService.streamGenerateContent(
+            model = model,
+            apiKeyQuery = cleanKey,
+            apiKeyHeader = null,
+            authHeader = null,
+            request = request
+        )
+
+        if (firstResponse.isSuccessful) return firstResponse
+
+        // 2. If rejected, fallback to x-goog-api-key header
+        if (firstResponse.code() in listOf(400, 401, 403)) {
+            val headerResponse = apiService.streamGenerateContent(
+                model = model,
+                apiKeyQuery = null,
+                apiKeyHeader = cleanKey,
+                authHeader = null,
+                request = request
+            )
+            if (headerResponse.isSuccessful) return headerResponse
+
+            // 3. Fallback to Bearer authorization
+            val bearerResponse = apiService.streamGenerateContent(
+                model = model,
+                apiKeyQuery = null,
+                apiKeyHeader = null,
+                authHeader = "Bearer $cleanKey",
+                request = request
+            )
+            if (bearerResponse.isSuccessful) return bearerResponse
+        }
+
+        return firstResponse
+    }
 
     /**
      * Streams generation response for the provided request.
@@ -70,7 +165,7 @@ class GeminiClient {
         var hasEmittedAnyChunk = false
 
         try {
-            val response = apiService.streamGenerateContent(
+            val response = executeStreamContent(
                 model = model,
                 apiKey = apiKey,
                 request = request
@@ -170,7 +265,7 @@ class GeminiClient {
                 generationConfig = GenerationConfig(maxOutputTokens = 20)
             )
 
-            val response = apiService.generateContent(
+            val response = executeGenerateContent(
                 model = model,
                 apiKey = apiKey,
                 request = testRequest
@@ -191,17 +286,17 @@ class GeminiClient {
         }
     }
 
-    private fun parseHttpError(code: Int, errorBody: String): Pair<AIErrorType, String> {
+    fun parseHttpError(code: Int, errorBody: String): Pair<AIErrorType, String> {
         val lower = errorBody.lowercase()
         return when {
             lower.contains("access_token_type_unsupported") || lower.contains("expected oauth 2 access token") -> {
-                AIErrorType.INVALID_API_KEY to "Google's new 'AQ.' key format has a known Google server-side auth bug (ACCESS_TOKEN_TYPE_UNSUPPORTED). Use an 'AIza...' API key created in Google Cloud Console (APIs & Services > Credentials > Create API Key)."
+                AIErrorType.INVALID_API_KEY to "Authentication failed. Please verify your Gemini API key in Settings. Ensure the Generative Language API is enabled for your Google account."
             }
             lower.contains("api_key_service_blocked") -> {
                 AIErrorType.INVALID_API_KEY to "Generative Language API is blocked or not enabled for this key in Google Cloud. Please enable Generative Language API in your Google Cloud Console."
             }
             code == 400 || code == 401 || code == 403 || lower.contains("api_key") || lower.contains("apikey") -> {
-                AIErrorType.INVALID_API_KEY to "Invalid or unauthorized API key. If your key starts with 'AQ.', Google's server is rejecting it; use an 'AIza...' key from Google Cloud Console."
+                AIErrorType.INVALID_API_KEY to "Invalid or unauthorized API key. Please verify your API key in Settings > Gemini API Key."
             }
             code == 429 || lower.contains("rate_limit") || lower.contains("resource_exhausted") -> {
                 AIErrorType.RATE_LIMIT to "Rate limit reached. Please wait a brief moment before sending another prompt."

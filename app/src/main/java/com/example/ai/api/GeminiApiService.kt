@@ -17,7 +17,9 @@ interface GeminiApiService {
     @Streaming
     suspend fun streamGenerateContent(
         @Path("model") model: String,
-        @Header("x-goog-api-key") apiKey: String,
+        @Query("key") apiKeyQuery: String? = null,
+        @Header("x-goog-api-key") apiKeyHeader: String? = null,
+        @Header("Authorization") authHeader: String? = null,
         @Query("alt") alt: String = "sse",
         @Body request: GenerateContentRequest
     ): Response<ResponseBody>
@@ -25,7 +27,9 @@ interface GeminiApiService {
     @POST("v1beta/models/{model}:generateContent")
     suspend fun generateContent(
         @Path("model") model: String,
-        @Header("x-goog-api-key") apiKey: String,
+        @Query("key") apiKeyQuery: String? = null,
+        @Header("x-goog-api-key") apiKeyHeader: String? = null,
+        @Header("Authorization") authHeader: String? = null,
         @Body request: GenerateContentRequest
     ): Response<GenerateContentResponse>
 }

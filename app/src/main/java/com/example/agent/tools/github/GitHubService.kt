@@ -36,10 +36,12 @@ class GitHubService(
         return builder
     }
 
+    fun hasToken(): Boolean = getToken().trim().isNotEmpty()
+
     suspend fun testConnection(): Result<String> = withContext(Dispatchers.IO) {
         val token = getToken().trim()
         if (token.isEmpty()) {
-            return@withContext Result.failure(Exception("No GitHub token configured. Please enter your Personal Access Token."))
+            return@withContext Result.failure(Exception("GitHub key is not set. Please set your GitHub API key in Settings, then I'll do it."))
         }
 
         try {
@@ -118,6 +120,83 @@ class GitHubService(
                     "html_url" to item.optString("html_url"),
                     "created_at" to item.optString("created_at"),
                     "updated_at" to item.optString("updated_at")
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createRepository(
+        name: String,
+        description: String = "",
+        private: Boolean = false,
+        autoInit: Boolean = true
+    ): Result<Map<String, Any?>> = withContext(Dispatchers.IO) {
+        val token = getToken().trim()
+        if (token.isEmpty()) {
+            return@withContext Result.failure(Exception("GitHub token is not set. Please set your token in Settings."))
+        }
+
+        try {
+            val payload = JSONObject().apply {
+                put("name", name.trim())
+                if (description.isNotBlank()) put("description", description.trim())
+                put("private", private)
+                put("auto_init", autoInit)
+            }
+
+            val request = newRequestBuilder("/user/repos")
+                .post(payload.toString().toRequestBody(jsonMediaType))
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                val err = response.body?.string() ?: ""
+                return@withContext Result.failure(Exception("Failed to create repository '$name' (HTTP ${response.code}): $err"))
+            }
+
+            val json = JSONObject(response.body?.string() ?: "{}")
+            Result.success(
+                mapOf(
+                    "full_name" to json.optString("full_name"),
+                    "name" to json.optString("name"),
+                    "html_url" to json.optString("html_url"),
+                    "clone_url" to json.optString("clone_url"),
+                    "private" to json.optBoolean("private", false),
+                    "default_branch" to json.optString("default_branch", "main"),
+                    "description" to json.optString("description", "")
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteRepository(
+        owner: String,
+        repo: String
+    ): Result<Map<String, Any?>> = withContext(Dispatchers.IO) {
+        val token = getToken().trim()
+        if (token.isEmpty()) {
+            return@withContext Result.failure(Exception("GitHub token is not set."))
+        }
+
+        try {
+            val request = newRequestBuilder("/repos/$owner/$repo")
+                .delete()
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                val err = response.body?.string() ?: ""
+                return@withContext Result.failure(Exception("Failed to delete repository '$owner/$repo' (HTTP ${response.code}): $err"))
+            }
+
+            Result.success(
+                mapOf(
+                    "deleted" to true,
+                    "repository" to "$owner/$repo"
                 )
             )
         } catch (e: Exception) {
@@ -214,6 +293,43 @@ class GitHubService(
                     "content" to truncated
                 )
             )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun downloadRawFile(owner: String, repo: String, path: String, ref: String? = null): Result<ByteArray> = withContext(Dispatchers.IO) {
+        try {
+            val cleanPath = path.trim().trimStart('/')
+            val endpoint = buildString {
+                append("/repos/$owner/$repo/contents/$cleanPath")
+                if (!ref.isNullOrBlank()) append("?ref=$ref")
+            }
+            val request = newRequestBuilder(endpoint).get().build()
+            val response = httpClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("File $cleanPath not found in $owner/$repo (HTTP ${response.code})"))
+            }
+
+            val bodyStr = response.body?.string() ?: ""
+            val json = JSONObject(bodyStr)
+            val encoding = json.optString("encoding", "")
+            val rawContent = json.optString("content", "")
+            val downloadUrl = json.optString("download_url", "")
+
+            if (encoding.equals("base64", ignoreCase = true) && rawContent.isNotBlank()) {
+                val cleanBase64 = rawContent.replace("\n", "").replace("\r", "")
+                val bytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+                return@withContext Result.success(bytes)
+            } else if (downloadUrl.isNotBlank()) {
+                val rawReq = newRequestBuilder(downloadUrl).get().build()
+                val rawResp = httpClient.newCall(rawReq).execute()
+                if (rawResp.isSuccessful && rawResp.body != null) {
+                    val bytes = rawResp.body!!.bytes()
+                    return@withContext Result.success(bytes)
+                }
+            }
+            Result.success(rawContent.toByteArray(Charsets.UTF_8))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -392,6 +508,46 @@ class GitHubService(
             val response = httpClient.newCall(request).execute()
             if (!response.isSuccessful) {
                 return@withContext Result.failure(Exception("Failed to save file in $owner/$repo (HTTP ${response.code})"))
+            }
+            val json = JSONObject(response.body?.string() ?: "{}")
+            val contentObj = json.optJSONObject("content")
+            Result.success(
+                mapOf(
+                    "path" to cleanPath,
+                    "sha" to contentObj?.optString("sha", ""),
+                    "html_url" to contentObj?.optString("html_url", "")
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createOrUpdateBinaryFile(
+        owner: String,
+        repo: String,
+        path: String,
+        base64Content: String,
+        message: String,
+        sha: String? = null,
+        branch: String? = null
+    ): Result<Map<String, Any?>> = withContext(Dispatchers.IO) {
+        try {
+            val cleanPath = path.trim().trimStart('/')
+            val payload = JSONObject().apply {
+                put("message", message.ifBlank { "Upload $cleanPath via SasukeX" })
+                put("content", base64Content)
+                if (!sha.isNullOrBlank()) put("sha", sha)
+                if (!branch.isNullOrBlank()) put("branch", branch)
+            }
+
+            val request = newRequestBuilder("/repos/$owner/$repo/contents/$cleanPath")
+                .put(payload.toString().toRequestBody(jsonMediaType))
+                .build()
+
+            val response = httpClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("Failed to upload file to $owner/$repo (HTTP ${response.code})"))
             }
             val json = JSONObject(response.body?.string() ?: "{}")
             val contentObj = json.optJSONObject("content")

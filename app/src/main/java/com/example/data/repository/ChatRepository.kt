@@ -8,6 +8,7 @@ import com.example.data.model.ConversationEntity
 import com.example.data.model.MessageEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -20,16 +21,19 @@ class ChatRepository(
 
     val allConversations: Flow<List<Conversation>> = conversationDao.getAllConversations()
         .map { list -> list.map { Conversation.fromEntity(it) } }
+        .catch { emit(emptyList()) }
         .flowOn(Dispatchers.IO)
 
     fun searchConversations(query: String): Flow<List<Conversation>> =
         conversationDao.searchConversations(query)
             .map { list -> list.map { Conversation.fromEntity(it) } }
+            .catch { emit(emptyList()) }
             .flowOn(Dispatchers.IO)
 
     fun getMessagesForConversation(conversationId: String): Flow<List<ChatMessage>> =
         messageDao.getMessagesForConversation(conversationId)
             .map { list -> list.map { ChatMessage.fromEntity(it) } }
+            .catch { emit(emptyList()) }
             .flowOn(Dispatchers.IO)
 
     suspend fun getMessagesList(conversationId: String): List<ChatMessage> = withContext(Dispatchers.IO) {
@@ -86,7 +90,11 @@ class ChatRepository(
         isError: Boolean,
         errorMessage: String? = null,
         activities: List<com.example.agent.model.ToolActivity> = emptyList(),
-        sources: List<com.example.agent.model.SourceCitation> = emptyList()
+        sources: List<com.example.agent.model.SourceCitation> = emptyList(),
+        promptTokens: Int? = null,
+        candidatesTokens: Int? = null,
+        totalTokens: Int? = null,
+        rawResponseJson: String? = null
     ) = withContext(Dispatchers.IO) {
         val dummyMessage = ChatMessage(
             id = id,
@@ -97,7 +105,11 @@ class ChatRepository(
             isError = isError,
             errorMessage = errorMessage,
             activities = activities,
-            sources = sources
+            sources = sources,
+            promptTokens = promptTokens,
+            candidatesTokens = candidatesTokens,
+            totalTokens = totalTokens,
+            rawResponseJson = rawResponseJson
         )
         val entity = dummyMessage.toEntity()
         messageDao.updateMessageStatus(
@@ -107,7 +119,11 @@ class ChatRepository(
             isError = isError,
             errorMessage = errorMessage,
             activitiesJson = entity.activitiesJson,
-            sourcesJson = entity.sourcesJson
+            sourcesJson = entity.sourcesJson,
+            promptTokens = promptTokens,
+            candidatesTokens = candidatesTokens,
+            totalTokens = totalTokens,
+            rawResponseJson = rawResponseJson
         )
     }
 

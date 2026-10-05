@@ -1,7 +1,10 @@
 package com.example.ai.model
 
-import com.squareup.moshi.Json
+import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.JsonReader
+import com.squareup.moshi.JsonWriter
+import com.squareup.moshi.Moshi
 
 @JsonClass(generateAdapter = true)
 data class GenerateContentRequest(
@@ -17,15 +20,117 @@ data class Content(
     val parts: List<Part>
 )
 
-@JsonClass(generateAdapter = true)
+@JsonClass(generateAdapter = false)
 data class Part(
     val text: String? = null,
     val thought: Boolean? = null,
-    @Json(name = "thought_signature") val thoughtSignature: String? = null,
-    @Json(name = "thoughtSignature") val thoughtSignatureCamel: String? = null,
+    val thoughtSignature: String? = null,
     val functionCall: FunctionCall? = null,
     val functionResponse: FunctionResponse? = null
 )
+
+class PartJsonAdapter(private val moshi: Moshi) : JsonAdapter<Part>() {
+    private val options: JsonReader.Options = JsonReader.Options.of(
+        "text", "thought", "thought_signature", "thoughtSignature", "functionCall", "functionResponse"
+    )
+
+    override fun fromJson(reader: JsonReader): Part {
+        var text: String? = null
+        var thought: Boolean? = null
+        var thoughtSignature: String? = null
+        var functionCall: FunctionCall? = null
+        var functionResponse: FunctionResponse? = null
+
+        val functionCallAdapter = moshi.adapter(FunctionCall::class.java)
+        val functionResponseAdapter = moshi.adapter(FunctionResponse::class.java)
+
+        reader.beginObject()
+        while (reader.hasNext()) {
+            when (reader.selectName(options)) {
+                0 -> text = reader.nextString()
+                1 -> thought = reader.nextBoolean()
+                2, 3 -> thoughtSignature = reader.nextString()
+                4 -> functionCall = functionCallAdapter.fromJson(reader)
+                5 -> functionResponse = functionResponseAdapter.fromJson(reader)
+                -1 -> {
+                    reader.skipName()
+                    reader.skipValue()
+                }
+            }
+        }
+        reader.endObject()
+
+        return Part(
+            text = text,
+            thought = thought,
+            thoughtSignature = thoughtSignature,
+            functionCall = functionCall,
+            functionResponse = functionResponse
+        )
+    }
+
+    override fun toJson(writer: JsonWriter, value: Part?) {
+        if (value == null) {
+            writer.nullValue()
+            return
+        }
+
+        val functionCallAdapter = moshi.adapter(FunctionCall::class.java)
+        val functionResponseAdapter = moshi.adapter(FunctionResponse::class.java)
+
+        writer.beginObject()
+        if (value.text != null) {
+            writer.name("text").value(value.text)
+        }
+        if (value.thought != null) {
+            writer.name("thought").value(value.thought)
+        }
+        val validSignature = value.thoughtSignature?.takeIf { 
+            it.isNotBlank() && it != "valid_thought_signature"
+        }
+        if (validSignature != null) {
+            writer.name("thought_signature").value(validSignature)
+        }
+        if (value.functionCall != null) {
+            writer.name("functionCall")
+            functionCallAdapter.toJson(writer, value.functionCall)
+        }
+        if (value.functionResponse != null) {
+            writer.name("functionResponse")
+            functionResponseAdapter.toJson(writer, value.functionResponse)
+        }
+        writer.endObject()
+    }
+}
+
+class PartJsonAdapterFactory : JsonAdapter.Factory {
+    override fun create(type: java.lang.reflect.Type, annotations: Set<Annotation>, moshi: Moshi): JsonAdapter<*>? {
+        if (type == Part::class.java) {
+            return PartJsonAdapter(moshi)
+        }
+        return null
+    }
+}
+
+fun Content.normalizedForNextTurn(): Content {
+    // Find the primary thought signature in this content turn if real
+    val turnSignature = this.parts.firstNotNullOfOrNull {
+        it.thoughtSignature?.takeIf { s -> s.isNotBlank() && s != "valid_thought_signature" }
+    }
+
+    return this.copy(
+        parts = this.parts.map { part ->
+            if (part.functionCall != null) {
+                val sig = part.thoughtSignature?.takeIf { it.isNotBlank() && it != "valid_thought_signature" } ?: turnSignature
+                part.copy(thoughtSignature = sig)
+            } else if (part.thoughtSignature == "valid_thought_signature") {
+                part.copy(thoughtSignature = null)
+            } else {
+                part
+            }
+        }
+    )
+}
 
 @JsonClass(generateAdapter = true)
 data class FunctionCall(
@@ -38,18 +143,6 @@ data class FunctionResponse(
     val name: String,
     val response: Map<String, Any?>
 )
-
-fun Content.normalizedForNextTurn(): Content {
-    return this.copy(
-        parts = this.parts.map { part ->
-            val sig = part.thoughtSignature ?: part.thoughtSignatureCamel
-            part.copy(
-                thoughtSignature = sig,
-                thoughtSignatureCamel = null
-            )
-        }
-    )
-}
 
 @JsonClass(generateAdapter = true)
 data class ToolDeclaration(

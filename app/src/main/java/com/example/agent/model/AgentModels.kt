@@ -77,6 +77,7 @@ data class ToolActivity(
     val rawToolName: String? = null,
     val thoughtSignature: String? = null,
     val confirmationPayload: ToolConfirmationPayload? = null,
+    val resultData: Map<String, Any?>? = null,
     val sources: List<SourceCitation> = emptyList()
 )
 
@@ -87,7 +88,9 @@ interface Tool {
     val permission: ToolPermission
 
     val requiresConfirmation: Boolean
-        get() = permission != ToolPermission.READ_ONLY
+        get() = permission == ToolPermission.DESTRUCTIVE
+
+    fun requiresConfirmation(arguments: Map<String, Any?>): Boolean = requiresConfirmation
 
     suspend fun execute(arguments: Map<String, Any?>): ToolResult
 

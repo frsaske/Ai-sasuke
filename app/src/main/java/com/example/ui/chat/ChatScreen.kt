@@ -1,6 +1,7 @@
 package com.example.ui.chat
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DataUsage
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -36,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -53,12 +56,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.local.AppSettingsManager
+import com.example.data.model.MessageRole
 import com.example.ui.components.ChatHistoryDrawerContent
 import com.example.ui.components.EmptyStateView
 import com.example.ui.components.MessageBubble
@@ -67,6 +73,7 @@ import com.example.ui.settings.SettingsScreen
 import com.example.ui.theme.BorderMedium
 import com.example.ui.theme.BorderSubtle
 import com.example.ui.theme.ObsidianBg
+import com.example.ui.theme.SasukeCrimson
 import com.example.ui.theme.SurfaceContainerDark
 import com.example.ui.theme.SurfaceDark
 import com.example.ui.theme.SurfaceElevated
@@ -97,6 +104,7 @@ fun MainAppContainer(
     val isGenerating by viewModel.isGenerating.collectAsStateWithLifecycle()
     val currentModel by viewModel.currentModel.collectAsStateWithLifecycle()
     val currentSystemPrompt by viewModel.currentSystemPrompt.collectAsStateWithLifecycle()
+    val memories by viewModel.allMemories.collectAsStateWithLifecycle()
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
@@ -113,20 +121,32 @@ fun MainAppContainer(
         }
     }
 
-    LaunchedEffect(viewModel.scrollToBottomEvent) {
-        viewModel.scrollToBottomEvent.collectLatest {
-            if (isNearBottom && !listState.isScrollInProgress) {
-                if (messages.isNotEmpty()) {
-                    listState.animateScrollToItem(messages.size - 1)
-                }
+    val totalConversationTokens by remember(messages) {
+        derivedStateOf {
+            messages.filter { it.role == MessageRole.ASSISTANT }.sumOf { msg ->
+                msg.totalTokens ?: (if ((msg.promptTokens ?: 0) + (msg.candidatesTokens ?: 0) > 0) (msg.promptTokens ?: 0) + (msg.candidatesTokens ?: 0) else 0)
             }
         }
     }
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(viewModel.scrollToBottomEvent) {
+        viewModel.scrollToBottomEvent.collectLatest {
+            try {
+                if (isNearBottom && !listState.isScrollInProgress) {
+                    if (messages.isNotEmpty()) {
+                        listState.scrollToItem(messages.size - 1)
+                    }
+                }
+            } catch (_: Exception) {}
         }
+    }
+
+    LaunchedEffect(messages.size) {
+        try {
+            if (messages.isNotEmpty()) {
+                listState.scrollToItem(messages.size - 1)
+            }
+        } catch (_: Exception) {}
     }
 
     // Quick Model Switcher Dialog
@@ -210,16 +230,50 @@ fun MainAppContainer(
             onNavigateBack = { currentScreen = AppScreen.CHAT },
             appSettingsManager = viewModel.appSettingsManager,
             secureStorageManager = viewModel.secureStorageManager,
-            onTestSearx = { viewModel.testSearxSearch(it) },
-            onTestGitHub = { viewModel.testGitHubConnection() }
+            memories = memories,
+            onSaveMemory = { fact, cat -> viewModel.saveMemory(fact, cat) },
+            onUpdateMemory = { id, fact, cat -> viewModel.updateMemory(id, fact, cat) },
+            onDeleteMemory = { viewModel.deleteMemory(it) },
+            onToggleMemory = { id, enabled -> viewModel.toggleMemory(id, enabled) },
+            onClearAllMemories = { viewModel.clearAllMemories() },
+            exportTextProvider = { viewModel.exportMemoriesAsText() },
+            exportJsonProvider = { viewModel.exportMemoriesAsJson() },
+            onTestTavily = { viewModel.testTavilySearch(it) },
+            onTestGitHub = { viewModel.testGitHubConnection() },
+            onTestGmail = { viewModel.testGmailConnection() },
+            onCreateFile = { owner, repo, path, content, msg, branch ->
+                viewModel.createGitHubFile(owner, repo, path, content, msg, branch)
+            },
+            onUpdateFile = { owner, repo, path, content, msg, sha, branch ->
+                viewModel.updateGitHubFile(owner, repo, path, content, msg, sha, branch)
+            },
+            onDeleteFile = { owner, repo, path, msg, sha, branch ->
+                viewModel.deleteGitHubFile(owner, repo, path, msg, sha, branch)
+            },
+            onListFiles = { owner, repo, path ->
+                viewModel.listGitHubFiles(owner, repo, path)
+            },
+            onClearLocalWorkspace = { viewModel.clearLocalWorkspace() },
+            onListLocalFiles = { viewModel.listLocalFiles() }
         )
         return
     }
 
-    // Drawer Back Handling
-    if (drawerState.isOpen) {
-        BackHandler {
+    val context = LocalContext.current
+    var backPressedTime by remember { mutableStateOf(0L) }
+
+    // Safe Back Handling: closes drawer if open, otherwise warns before exiting
+    BackHandler(enabled = true) {
+        if (drawerState.isOpen) {
             coroutineScope.launch { drawerState.close() }
+        } else {
+            val now = System.currentTimeMillis()
+            if (now - backPressedTime < 2000) {
+                (context as? android.app.Activity)?.finish()
+            } else {
+                backPressedTime = now
+                android.widget.Toast.makeText(context, "Press back again to exit", android.widget.Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -277,10 +331,12 @@ fun MainAppContainer(
                                 Spacer(modifier = Modifier.width(6.dp))
 
                                 val modelShortName = when (currentModel) {
-                                    "gemini-3.5-flash" -> "3.5 Flash"
-                                    "gemini-3.1-pro-preview" -> "3.1 Pro"
-                                    "gemini-3.1-flash-lite-preview" -> "Flash-Lite"
-                                    else -> currentModel
+                                    "gemini-3.5-flash" -> "Chidori 3.5"
+                                    "gemini-3.1-pro-preview" -> "Susanoo Pro"
+                                    "gemini-3.1-flash-lite-preview" -> "Sharingan Lite"
+                                    "gemini-2.5-flash" -> "Amaterasu 2.5"
+                                    "gemini-flash-latest" -> "Rinnegan"
+                                    else -> currentModel.removePrefix("gemini-")
                                 }
 
                                 Text(
@@ -311,6 +367,36 @@ fun MainAppContainer(
                             }
                         },
                         actions = {
+                            // Conversation Tokens Badge
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = SurfaceContainerDark,
+                                border = BorderStroke(0.6.dp, BorderSubtle),
+                                modifier = Modifier
+                                    .padding(end = 4.dp)
+                                    .testTag("top_bar_token_counter")
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.DataUsage,
+                                        contentDescription = null,
+                                        tint = SasukeCrimson,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "$totalConversationTokens tok",
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextSecondary,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
+
                             IconButton(
                                 onClick = { viewModel.startNewChat() },
                                 modifier = Modifier.testTag("top_bar_new_chat_button")
@@ -345,7 +431,7 @@ fun MainAppContainer(
                     text = composerText,
                     onTextChanged = { viewModel.onComposerTextChanged(it) },
                     isGenerating = isGenerating,
-                    onSend = { viewModel.sendMessage() },
+                    onSend = { file -> viewModel.sendMessage(attachedFile = file) },
                     onStop = { viewModel.stopGeneration() },
                     modifier = Modifier
                         .navigationBarsPadding()

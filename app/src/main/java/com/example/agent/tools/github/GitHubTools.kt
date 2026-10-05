@@ -1,9 +1,13 @@
 package com.example.agent.tools.github
 
+import android.content.Context
 import com.example.agent.model.SourceCitation
 import com.example.agent.model.Tool
 import com.example.agent.model.ToolPermission
 import com.example.agent.model.ToolResult
+import com.example.util.FileTransferManager
+
+private const val GITHUB_KEY_NOT_SET_MSG = "GitHub key is not set. Please set your GitHub API key in Settings, then I'll do it."
 
 // --- 1. LIST REPOS ---
 class GitHubListReposTool(private val service: GitHubService) : Tool {
@@ -22,6 +26,10 @@ class GitHubListReposTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val sort = arguments["sort"]?.toString() ?: "updated"
         val perPage = (arguments["per_page"] as? Number)?.toInt() ?: 10
 
@@ -61,6 +69,10 @@ class GitHubRepoInfoTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         if (owner.isEmpty() || repo.isEmpty()) {
@@ -101,6 +113,10 @@ class GitHubListFilesTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val path = arguments["path"]?.toString()?.trim() ?: ""
@@ -142,6 +158,10 @@ class GitHubReadFileTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val path = arguments["path"]?.toString()?.trim() ?: ""
@@ -182,6 +202,10 @@ class GitHubListCommitsTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val perPage = (arguments["per_page"] as? Number)?.toInt() ?: 5
@@ -222,6 +246,10 @@ class GitHubListIssuesTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val state = arguments["state"]?.toString() ?: "open"
@@ -259,6 +287,10 @@ class GitHubListBranchesTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
 
@@ -294,6 +326,10 @@ class GitHubListReleasesTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
 
@@ -331,6 +367,10 @@ class GitHubCreateIssueTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val title = arguments["title"]?.toString()?.trim() ?: ""
@@ -375,6 +415,10 @@ class GitHubCreateFileTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val path = arguments["path"]?.toString()?.trim() ?: ""
@@ -416,6 +460,10 @@ class GitHubUpdateFileTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val path = arguments["path"]?.toString()?.trim() ?: ""
@@ -457,6 +505,10 @@ class GitHubDeleteFileTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val path = arguments["path"]?.toString()?.trim() ?: ""
@@ -495,6 +547,10 @@ class GitHubCreateBranchTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val branch = arguments["branch"]?.toString()?.trim() ?: ""
@@ -533,6 +589,10 @@ class GitHubCreatePullRequestTool(private val service: GitHubService) : Tool {
     )
 
     override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
         val owner = arguments["owner"]?.toString()?.trim() ?: ""
         val repo = arguments["repo"]?.toString()?.trim() ?: ""
         val title = arguments["title"]?.toString()?.trim() ?: ""
@@ -558,3 +618,270 @@ class GitHubCreatePullRequestTool(private val service: GitHubService) : Tool {
         )
     }
 }
+
+// --- 15. DOWNLOAD FILE TO DEVICE ---
+class GitHubDownloadFileTool(
+    private val service: GitHubService,
+    private val context: Context
+) : Tool {
+    override val name: String = "github_download_file"
+    override val description: String =
+        "Download a file directly from a GitHub repository to the user's Android device (Downloads folder). Produces a Download File Card and sends a download notification."
+
+    override val permission: ToolPermission = ToolPermission.READ_ONLY
+
+    override val parametersSchema: Map<String, Any?> = mapOf(
+        "type" to "OBJECT",
+        "properties" to mapOf(
+            "owner" to mapOf("type" to "STRING", "description" to "Repository owner"),
+            "repo" to mapOf("type" to "STRING", "description" to "Repository name"),
+            "path" to mapOf("type" to "STRING", "description" to "Path to the file to download (e.g. 'main.py' or 'session/creds.json')"),
+            "ref" to mapOf("type" to "STRING", "description" to "Branch, commit SHA, or tag (optional)")
+        ),
+        "required" to listOf("owner", "repo", "path")
+    )
+
+    override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
+        val owner = arguments["owner"]?.toString()?.trim() ?: ""
+        val repo = arguments["repo"]?.toString()?.trim() ?: ""
+        val path = arguments["path"]?.toString()?.trim() ?: ""
+        val ref = arguments["ref"]?.toString()?.trim()
+
+        if (owner.isEmpty() || repo.isEmpty() || path.isEmpty()) {
+            return ToolResult.failure("INVALID_ARGUMENT", "owner, repo, and path are all required.")
+        }
+
+        val fileName = path.substringAfterLast('/')
+        return service.downloadRawFile(owner, repo, path, ref).fold(
+            onSuccess = { bytes ->
+                val savedFile = FileTransferManager.saveDownloadedFile(context, fileName, bytes)
+                FileTransferManager.postDownloadNotification(context, savedFile)
+
+                val preview = if (bytes.size < 4000) {
+                    try { String(bytes, Charsets.UTF_8) } catch (_: Exception) { null }
+                } else null
+
+                val data = mapOf(
+                    "downloaded_file" to mapOf(
+                        "file_name" to savedFile.name,
+                        "file_path" to savedFile.absolutePath,
+                        "file_size" to savedFile.length(),
+                        "mime_type" to FileTransferManager.getMimeType(savedFile.name),
+                        "status" to "SUCCESS",
+                        "extension" to savedFile.extension
+                    ),
+                    "file_name" to savedFile.name,
+                    "file_size" to savedFile.length(),
+                    "file_path" to savedFile.absolutePath,
+                    "code_preview" to preview
+                )
+
+                ToolResult.success(
+                    data = data,
+                    summary = "Downloaded ${savedFile.name} (${FileTransferManager.formatFileSize(savedFile.length())}) to device Downloads"
+                )
+            },
+            onFailure = { ToolResult.failure("DOWNLOAD_ERROR", it.localizedMessage ?: "Failed to download file from GitHub") }
+        )
+    }
+}
+
+// --- 16. UPLOAD LOCAL ATTACHED FILE TO GITHUB ---
+class GitHubUploadLocalFileTool(
+    private val service: GitHubService,
+    private val context: Context
+) : Tool {
+    override val name: String = "github_upload_local_file"
+    override val description: String =
+        "Upload a locally attached file (from the user's device) directly to a repository without consuming tokens. Use when the user attached a file (such as creds.json, main.py, etc.) and requested to add or upload it to a repository folder."
+
+    override val permission: ToolPermission = ToolPermission.WRITE
+
+    override val parametersSchema: Map<String, Any?> = mapOf(
+        "type" to "OBJECT",
+        "properties" to mapOf(
+            "owner" to mapOf("type" to "STRING", "description" to "Repository owner"),
+            "repo" to mapOf("type" to "STRING", "description" to "Repository name"),
+            "path" to mapOf("type" to "STRING", "description" to "Destination path in repository (e.g. 'session/session1/creds.json')"),
+            "local_file_name" to mapOf("type" to "STRING", "description" to "The name of the locally attached file (e.g. 'creds.json')"),
+            "message" to mapOf("type" to "STRING", "description" to "Commit message (optional)"),
+            "branch" to mapOf("type" to "STRING", "description" to "Target branch (optional)")
+        ),
+        "required" to listOf("owner", "repo", "path", "local_file_name")
+    )
+
+    override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
+        val owner = arguments["owner"]?.toString()?.trim() ?: ""
+        val repo = arguments["repo"]?.toString()?.trim() ?: ""
+        val path = arguments["path"]?.toString()?.trim() ?: ""
+        val localFileName = arguments["local_file_name"]?.toString()?.trim() ?: ""
+        val message = arguments["message"]?.toString()?.ifBlank { "Upload $localFileName to $path via SasukeX" } ?: "Upload $localFileName to $path via SasukeX"
+        val branch = arguments["branch"]?.toString()
+
+        if (owner.isEmpty() || repo.isEmpty() || path.isEmpty() || localFileName.isEmpty()) {
+            return ToolResult.failure("INVALID_ARGUMENT", "owner, repo, path, and local_file_name are all required.")
+        }
+
+        val bytes = FileTransferManager.getAttachedFileBytes(context, localFileName)
+            ?: return ToolResult.failure("FILE_NOT_FOUND", "Attached file '$localFileName' was not found on device. Please attach it again.")
+
+        val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+
+        return service.createOrUpdateBinaryFile(owner, repo, path, base64, message, sha = null, branch = branch).fold(
+            onSuccess = { res ->
+                ToolResult.success(
+                    data = res + mapOf(
+                        "uploaded_file" to localFileName,
+                        "target_path" to path,
+                        "size_bytes" to bytes.size
+                    ),
+                    summary = "Successfully uploaded $localFileName (${FileTransferManager.formatFileSize(bytes.size.toLong())}) to $owner/$repo at $path"
+                )
+            },
+            onFailure = { ToolResult.failure("UPLOAD_ERROR", it.localizedMessage ?: "Failed to upload file to GitHub") }
+        )
+    }
+}
+
+// --- 17. READ ATTACHED FILE CONTENT ---
+class ReadAttachedFileTool(
+    private val context: Context
+) : Tool {
+    override val name: String = "read_attached_file"
+    override val description: String =
+        "Read the text content of a locally attached file ONLY if the user explicitly asks to read, inspect, or explain the file content. Do NOT call this tool for file upload or transfer operations."
+
+    override val permission: ToolPermission = ToolPermission.READ_ONLY
+
+    override val parametersSchema: Map<String, Any?> = mapOf(
+        "type" to "OBJECT",
+        "properties" to mapOf(
+            "file_name" to mapOf("type" to "STRING", "description" to "The name of the locally attached file to read")
+        ),
+        "required" to listOf("file_name")
+    )
+
+    override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        val fileName = arguments["file_name"]?.toString()?.trim() ?: ""
+        if (fileName.isEmpty()) {
+            return ToolResult.failure("INVALID_ARGUMENT", "file_name is required.")
+        }
+
+        val text = FileTransferManager.getAttachedFileText(context, fileName)
+            ?: return ToolResult.failure("FILE_NOT_FOUND", "Could not read attached file '$fileName' as text.")
+
+        val maxChars = 12000
+        val truncated = if (text.length > maxChars) {
+            text.take(maxChars) + "\n\n... [Content truncated, total length: ${text.length} chars]"
+        } else text
+
+        return ToolResult.success(
+            data = mapOf(
+                "file_name" to fileName,
+                "content" to truncated,
+                "size_chars" to text.length
+            ),
+            summary = "Read $fileName (${text.length} characters)"
+        )
+    }
+}
+
+// --- 18. CREATE REPOSITORY ---
+class GitHubCreateRepoTool(private val service: GitHubService) : Tool {
+    override val name: String = "github_create_repo"
+    override val description: String =
+        "Create a new repository on GitHub under the authenticated user's account, with optional description, visibility, and initial README."
+
+    override val permission: ToolPermission = ToolPermission.WRITE
+
+    override val parametersSchema: Map<String, Any?> = mapOf(
+        "type" to "OBJECT",
+        "properties" to mapOf(
+            "name" to mapOf("type" to "STRING", "description" to "The name of the new repository (e.g. 'my-cool-project')"),
+            "description" to mapOf("type" to "STRING", "description" to "A short description of the repository"),
+            "private" to mapOf("type" to "BOOLEAN", "description" to "Whether the repository should be private (default false)"),
+            "auto_init" to mapOf("type" to "BOOLEAN", "description" to "Whether to initialize the repository with an initial README (default true)")
+        ),
+        "required" to listOf("name")
+    )
+
+    override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
+        val name = arguments["name"]?.toString()?.trim() ?: ""
+        val description = arguments["description"]?.toString() ?: ""
+        val private = (arguments["private"] as? Boolean) ?: false
+        val autoInit = (arguments["auto_init"] as? Boolean) ?: true
+
+        if (name.isEmpty()) {
+            return ToolResult.failure("INVALID_ARGUMENT", "Repository name is required.")
+        }
+
+        return service.createRepository(name = name, description = description, private = private, autoInit = autoInit).fold(
+            onSuccess = { res ->
+                val fullName = res["full_name"]?.toString() ?: name
+                val url = res["html_url"]?.toString()
+                val sources = if (url != null) listOf(SourceCitation(fullName, url)) else emptyList()
+                ToolResult.success(
+                    data = res,
+                    summary = "Created repository '$fullName'",
+                    sources = sources
+                )
+            },
+            onFailure = { ToolResult.failure("GITHUB_ERROR", it.localizedMessage ?: "Failed to create repository") }
+        )
+    }
+}
+
+// --- 19. DELETE REPOSITORY ---
+class GitHubDeleteRepoTool(private val service: GitHubService) : Tool {
+    override val name: String = "github_delete_repo"
+    override val description: String =
+        "Permanently delete a repository on GitHub. DESTRUCTIVE action that requires confirmation."
+
+    override val permission: ToolPermission = ToolPermission.DESTRUCTIVE
+
+    override val parametersSchema: Map<String, Any?> = mapOf(
+        "type" to "OBJECT",
+        "properties" to mapOf(
+            "owner" to mapOf("type" to "STRING", "description" to "The repository owner username or org"),
+            "repo" to mapOf("type" to "STRING", "description" to "The repository name to delete")
+        ),
+        "required" to listOf("owner", "repo")
+    )
+
+    override suspend fun execute(arguments: Map<String, Any?>): ToolResult {
+        if (!service.hasToken()) {
+            return ToolResult.failure("CONFIG_REQUIRED", GITHUB_KEY_NOT_SET_MSG)
+        }
+
+        val owner = arguments["owner"]?.toString()?.trim() ?: ""
+        val repo = arguments["repo"]?.toString()?.trim() ?: ""
+
+        if (owner.isEmpty() || repo.isEmpty()) {
+            return ToolResult.failure("INVALID_ARGUMENT", "owner and repo are required.")
+        }
+
+        return service.deleteRepository(owner = owner, repo = repo).fold(
+            onSuccess = { res ->
+                ToolResult.success(
+                    data = res,
+                    summary = "Permanently deleted repository $owner/$repo"
+                )
+            },
+            onFailure = { ToolResult.failure("GITHUB_ERROR", it.localizedMessage ?: "Failed to delete repository") }
+        )
+    }
+}
+
+

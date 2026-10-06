@@ -51,8 +51,7 @@ class GeminiClient {
     val apiService: GeminiApiService = retrofit.create(GeminiApiService::class.java)
 
     /**
-     * Executes generateContent with intelligent dual-mode auth handling (query vs header)
-     * to eliminate Google's ACCESS_TOKEN_TYPE_UNSUPPORTED error for both AQ and AIza keys.
+     * Executes generateContent with clean key handling and multi-strategy auth.
      */
     suspend fun executeGenerateContent(
         model: String,
@@ -61,23 +60,23 @@ class GeminiClient {
     ): retrofit2.Response<com.example.ai.model.GenerateContentResponse> {
         val cleanKey = apiKey.trim()
 
-        // 1. Official Gemini API authentication method: x-goog-api-key header.
+        // 1. Primary standard method: key query parameter
         val firstResponse = apiService.generateContent(
             model = model,
-            apiKeyQuery = null,
-            apiKeyHeader = cleanKey,
+            apiKeyQuery = cleanKey,
+            apiKeyHeader = null,
             authHeader = null,
             request = request
         )
 
         if (firstResponse.isSuccessful) return firstResponse
 
-        // 2. Compatibility fallback for older key configurations.
-        if (firstResponse.code() in listOf(400, 401, 403)) {
+        // 2. If rejected with 400 or 403, retry with x-goog-api-key header
+        if (firstResponse.code() in listOf(400, 403)) {
             val headerResponse = apiService.generateContent(
                 model = model,
-                apiKeyQuery = cleanKey,
-                apiKeyHeader = null,
+                apiKeyQuery = null,
+                apiKeyHeader = cleanKey,
                 authHeader = null,
                 request = request
             )
@@ -88,7 +87,7 @@ class GeminiClient {
     }
 
     /**
-     * Executes streamGenerateContent with intelligent multi-stage auth fallback.
+     * Executes streamGenerateContent with clean key handling and multi-strategy auth.
      */
     suspend fun executeStreamContent(
         model: String,
@@ -97,23 +96,23 @@ class GeminiClient {
     ): retrofit2.Response<ResponseBody> {
         val cleanKey = apiKey.trim()
 
-        // 1. Official Gemini API authentication method: x-goog-api-key header.
+        // 1. Primary standard method: key query parameter
         val firstResponse = apiService.streamGenerateContent(
             model = model,
-            apiKeyQuery = null,
-            apiKeyHeader = cleanKey,
+            apiKeyQuery = cleanKey,
+            apiKeyHeader = null,
             authHeader = null,
             request = request
         )
 
         if (firstResponse.isSuccessful) return firstResponse
 
-        // 2. Compatibility fallback for older key configurations.
-        if (firstResponse.code() in listOf(400, 401, 403)) {
+        // 2. If rejected with 400 or 403, fallback to x-goog-api-key header
+        if (firstResponse.code() in listOf(400, 403)) {
             val headerResponse = apiService.streamGenerateContent(
                 model = model,
-                apiKeyQuery = cleanKey,
-                apiKeyHeader = null,
+                apiKeyQuery = null,
+                apiKeyHeader = cleanKey,
                 authHeader = null,
                 request = request
             )
@@ -269,6 +268,12 @@ class GeminiClient {
     fun parseHttpError(code: Int, errorBody: String): Pair<AIErrorType, String> {
         val lower = errorBody.lowercase()
         return when {
+            code == 503 || lower.contains("high demand") || lower.contains("temporarily unavailable") -> {
+                AIErrorType.SERVICE_UNAVAILABLE to "This Gemini model is currently experiencing high demand from Google. Please switch models (e.g. to SasukeX Sharingan Lite) from the top bar or try again shortly."
+            }
+            code == 404 || lower.contains("no longer available") -> {
+                AIErrorType.SERVICE_UNAVAILABLE to "This model version is deprecated or retired by Google. Please select SasukeX Sharingan or Chidori 3.8 from the model switcher."
+            }
             lower.contains("access_token_type_unsupported") || lower.contains("expected oauth 2 access token") -> {
                 AIErrorType.INVALID_API_KEY to "Authentication failed. Please verify your Gemini API key in Settings. Ensure the Generative Language API is enabled for your Google account."
             }
@@ -281,7 +286,7 @@ class GeminiClient {
             code == 429 || lower.contains("rate_limit") || lower.contains("resource_exhausted") -> {
                 AIErrorType.RATE_LIMIT to "Rate limit reached. Please wait a brief moment before sending another prompt."
             }
-            code == 503 || code == 500 || lower.contains("unavailable") -> {
+            code == 500 || lower.contains("unavailable") -> {
                 AIErrorType.SERVICE_UNAVAILABLE to "Google Gemini service is temporarily overloaded or unavailable. Please retry shortly."
             }
             lower.contains("quota") -> {

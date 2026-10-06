@@ -18,7 +18,6 @@ class AppSettingsManager(context: Context) {
     companion object {
         private const val PREFS_NAME = "sasukex_app_settings"
         private const val KEY_SELECTED_MODEL = "selected_gemini_model"
-        private const val KEY_FLASH_LITE_MIGRATION_DONE = "flash_lite_model_migration_done"
         private const val KEY_SYSTEM_PROMPT = "system_prompt"
 
         // Agent Tools keys
@@ -39,46 +38,40 @@ class AppSettingsManager(context: Context) {
         private const val KEY_GIT_DEFAULT_OWNER = "git_default_owner"
         private const val KEY_GIT_DEFAULT_REPO = "git_default_repo"
 
-        const val DEFAULT_MODEL = "gemini-flash-lite-latest"
+        const val DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
         const val DEFAULT_SEARX_URL = "https://search.ononoki.org"
         const val DEFAULT_SYSTEM_PROMPT =
             "You are SasukeX, a smart, concise, and ultra-capable personal AI assistant equipped with real tools: Termux Terminal (terminal_execute), Intelligent Local Storage, Google Calendar, Google Drive, Git/GitHub operations, Gmail, Search, Weather, Wikipedia, Currency, Time, and Memory.\n\nCRITICAL RULES:\n1. CREDIT/TOKEN SAVINGS: Keep answers concise and direct. Never dump huge raw logs or full files unless explicitly asked. Use compact metadata search tools.\n2. FILE TRANSFERS: When handling files or Git, invoke direct tool actions. Never output binary content in prompt text.\n3. MEMORY: Save important personal facts (name, age, preferences) using save_memory.\n4. SAFETY: Sensitive commands (rm -rf, delete, force-push) require confirmation."
 
         val AVAILABLE_MODELS = listOf(
             ModelOption(
-                id = "gemini-flash-lite-latest",
-                displayName = "SasukeX Flash Lite (Gemini Flash Lite Latest)",
-                description = "Token & Credit Saver • Same model used by the working API test",
-                badge = "Save Credits"
+                id = "gemini-3.1-flash-lite-preview",
+                displayName = "SasukeX Sharingan (Gemini 3.1 Flash Lite)",
+                description = "Ultra Fast & Free Tier Friendly • Instant responses, low latency & minimal quota consumption",
+                badge = "Recommended"
+            ),
+            ModelOption(
+                id = "gemini-3.8-flash",
+                displayName = "SasukeX Chidori (Gemini 3.8 Flash)",
+                description = "Modern Flagship • Superior intelligence, multimodal reasoning & full tool execution",
+                badge = "Flagship"
             ),
             ModelOption(
                 id = "gemini-3.5-flash",
-                displayName = "SasukeX Chidori (Gemini 3.5 Flash)",
-                description = "Recommended Flagship • Lightning fast responses, intelligent reasoning & full tool calling",
-                badge = "Flagship"
+                displayName = "SasukeX Raikiri (Gemini 3.5 Flash)",
+                description = "High Throughput • Fast, capable generation for multi-turn chats and tools",
+                badge = "Fast"
             ),
             ModelOption(
                 id = "gemini-3.1-pro-preview",
                 displayName = "SasukeX Susanoo (Gemini 3.1 Pro)",
-                description = "Maximum Reasoning • Complex coding, mathematical problem-solving & deep analysis",
+                description = "Maximum Reasoning • Complex coding, deep problem-solving & advanced analysis",
                 badge = "Deep Reasoning"
-            ),
-            ModelOption(
-                id = "gemini-3.1-flash-lite-preview",
-                displayName = "SasukeX Sharingan (Gemini 3.1 Flash Lite)",
-                description = "Token & Credit Saver • Ultra-low latency for instant quick queries and light workflows",
-                badge = "Save Credits"
-            ),
-            ModelOption(
-                id = "gemini-2.5-flash",
-                displayName = "SasukeX Amaterasu (Gemini 2.5 Flash)",
-                description = "High Throughput • Reliable multimodal understanding and high concurrency",
-                badge = "Balanced"
             ),
             ModelOption(
                 id = "gemini-flash-latest",
                 displayName = "SasukeX Rinnegan (Flash Latest)",
-                description = "Auto-Updating • Automatically tracks the freshest Gemini Flash generation",
+                description = "Auto-Updating • Automatically tracks Google's latest Gemini Flash generation",
                 badge = "Auto Latest"
             )
         )
@@ -150,13 +143,6 @@ class AppSettingsManager(context: Context) {
 
     fun getSelectedModel(): String {
         val stored = prefs.getString(KEY_SELECTED_MODEL, DEFAULT_MODEL) ?: DEFAULT_MODEL
-        if (!prefs.getBoolean(KEY_FLASH_LITE_MIGRATION_DONE, false)) {
-            prefs.edit()
-                .putString(KEY_SELECTED_MODEL, DEFAULT_MODEL)
-                .putBoolean(KEY_FLASH_LITE_MIGRATION_DONE, true)
-                .apply()
-            return DEFAULT_MODEL
-        }
         return if (stored.startsWith("gemini-1.") || stored == "gemini-2.0-flash" || AVAILABLE_MODELS.none { it.id == stored }) {
             setSelectedModel(DEFAULT_MODEL)
             DEFAULT_MODEL

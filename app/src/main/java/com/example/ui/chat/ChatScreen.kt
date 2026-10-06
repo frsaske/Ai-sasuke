@@ -331,10 +331,10 @@ fun MainAppContainer(
                                 Spacer(modifier = Modifier.width(6.dp))
 
                                 val modelShortName = when (currentModel) {
-                                    "gemini-3.5-flash" -> "Chidori 3.5"
-                                    "gemini-3.1-pro-preview" -> "Susanoo Pro"
                                     "gemini-3.1-flash-lite-preview" -> "Sharingan Lite"
-                                    "gemini-2.5-flash" -> "Amaterasu 2.5"
+                                    "gemini-3.8-flash" -> "Chidori 3.8"
+                                    "gemini-3.5-flash" -> "Raikiri 3.5"
+                                    "gemini-3.1-pro-preview" -> "Susanoo Pro"
                                     "gemini-flash-latest" -> "Rinnegan"
                                     else -> currentModel.removePrefix("gemini-")
                                 }
